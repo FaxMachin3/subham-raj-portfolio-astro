@@ -1,0 +1,58 @@
+[
+  {
+    "id": "trm",
+    "company": "TRM Labs",
+    "role": "Frontend Engineer",
+    "location": "Remote (Bengaluru)",
+    "start": "2023-11",
+    "end": "2026",
+    "summary": "TRM Forensics, a graph-based blockchain investigation product used by government agencies and financial institutions.",
+    "highlights": [
+      "Led a 20+ PR performance push on the KeyLines investigation graph: plot matching on 1,600 elements went from 15.5 s to 14 ms.",
+      "Built the chat UI for Co-Case Agent (now Orion), TRM’s AI investigation assistant, launched March 2026.",
+      "Proposed and built a Radix UI + Tailwind design system; all new UI is built on it. Keyboard-navigable data tables for a government contract.",
+      "Introduced route-level code splitting (~85% smaller initial bundle), led frontend i18n with typed keys and CI checks, and built an OpenAPI-typed API client.",
+      "Shipped Triage escalation, Deconflict notifications and the T3 Financial Crime Unit flow end to end. 580+ merged PRs."
+    ]
+  },
+  {
+    "id": "paytm",
+    "company": "Paytm",
+    "role": "Senior Software Engineer",
+    "location": "Bengaluru",
+    "start": "2022-03",
+    "end": "2023-10",
+    "summary": "Paytm Payments and Paytm Money.",
+    "highlights": [
+      "Led a project that cut a backend service’s running cost by about 90%.",
+      "Built a configurable A/B testing framework and improved frontend load time by about 30%.",
+      "Built a stock-market education video platform and a standalone ETF page."
+    ]
+  },
+  {
+    "id": "enterprise-minds",
+    "company": "Enterprise Minds",
+    "role": "Senior Software Engineer, Consulting",
+    "location": "Pune (remote)",
+    "start": "2020-10",
+    "end": "2022-03",
+    "summary": "Frontend modernization for product companies.",
+    "highlights": [
+      "ThoughtSpot: migrated the core charting and table area from a legacy Angular app to React micro-frontends with GraphQL and Apollo Client.",
+      "Open Financial: refactored the frontend onto Next.js and React Query."
+    ]
+  },
+  {
+    "id": "infosys",
+    "company": "Infosys",
+    "role": "Senior Systems Engineer",
+    "location": "Hyderabad",
+    "start": "2018-04",
+    "end": "2020-10",
+    "summary": "Mobile and frontend delivery for enterprise clients.",
+    "highlights": [
+      "Built an iOS app in Xamarin for Arizona Public Service with App Center analytics and crash reporting.",
+      "Won AssistEdge 2018, Infosys’s bot-automation hackathon."
+    ]
+  }
+]

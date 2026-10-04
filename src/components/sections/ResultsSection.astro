@@ -1,0 +1,23 @@
+---
+import ResultsTable from '@/components/islands/ResultsTable';
+import { optionalMetric, requireMetric } from '@/lib/metrics';
+import type { FixId } from '@/fixes/types';
+
+const polling = optionalMetric('polling');
+const production: Record<FixId, string> = {
+  plot: requireMetric('plotMatching').value,
+  jank: 'Jank removed',
+  bundle: `${requireMetric('bundleCut').value} smaller`,
+  network: polling ? `${polling.value} polling` : 'Fetch on demand',
+  a11y: 'Design system for all new UI',
+  i18n: 'Typed keys + CI checks',
+};
+---
+
+<section class="section wrap" id="results" aria-labelledby="results-title">
+  <div class="section-head">
+    <h2 id="results-title">Your session’s results</h2>
+    <p>Filled in from real measurements as you break and fix things above.</p>
+  </div>
+  <ResultsTable client:idle production={production} />
+</section>

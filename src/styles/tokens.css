@@ -1,0 +1,68 @@
+:root {
+  /* Colour: every text/background pair below meets WCAG AA. */
+  --color-paper: #f5f4ef;
+  --color-surface: #ffffff;
+  --color-sunken: #f1f0ea;
+  --color-ink: #121212;
+  --color-muted: #55554e;
+  --color-line: #dcdad2;
+  --color-good: #08734a;
+  --color-good-bg: #dcf5e8;
+  --color-bad: #b3261e;
+  --color-bad-bg: #fde4e1;
+  --color-busy: #6f5300;
+  --color-busy-bg: #fff3c4;
+  --color-warn: #ffcf1a;
+  --color-accent: #2b59c3;
+  --color-violet: #7a35e8;
+  --color-night: #111111;
+  --color-night-muted: #a1a19a;
+
+  /* Type */
+  --font-sans: 'Poppins', 'Poppins Fallback', system-ui, -apple-system, 'Segoe UI', 'Noto Sans', sans-serif;
+  --font-mono: 'JetBrains Mono', 'JetBrains Mono Fallback', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: clamp(1.05rem, 0.98rem + 0.3vw, 1.15rem);
+  --text-h2: clamp(1.8rem, 1.3rem + 2vw, 2.7rem);
+  --text-h1: clamp(2.5rem, 1.4rem + 5vw, 5.4rem);
+
+  /* Space & shape */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  --radius-sm: 9px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 26px;
+  --content-width: 1160px;
+  --header-height: 64px;
+  --hud-height: 60px;
+
+  --shadow-pop: 4px 4px 0 var(--color-ink);
+  --ease-spring: cubic-bezier(0.3, 1.4, 0.5, 1);
+}
+
+/* Metric-matched to the web fonts so the swap does not shift layout. */
+@font-face {
+  font-family: 'Poppins Fallback';
+  src: local('Arial'), local('Liberation Sans'), local('Helvetica');
+  size-adjust: 104.85%;
+  ascent-override: 100.14%;
+  descent-override: 33.38%;
+  line-gap-override: 9.54%;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono Fallback';
+  src: local('Courier New'), local('Liberation Mono'), local('Menlo');
+  size-adjust: 99.98%;
+  ascent-override: 102.02%;
+  descent-override: 30%;
+  line-gap-override: 0%;
+}

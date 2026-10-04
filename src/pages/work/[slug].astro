@@ -1,0 +1,164 @@
+---
+import type { GetStaticPaths } from 'astro';
+import { getCollection, render } from 'astro:content';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { requireMetric, unbreakable } from '@/lib/metrics';
+import { site } from '@/data/site';
+
+export const getStaticPaths = (async () => {
+  const studies = (await getCollection('work')).sort((a, b) => a.data.order - b.data.order);
+  return studies.map((study, index) => ({
+    params: { slug: study.id },
+    props: { study, next: studies[(index + 1) % studies.length] },
+  }));
+}) satisfies GetStaticPaths;
+
+const { study, next } = Astro.props;
+const { Content } = await render(study);
+const headlines = study.data.metrics.map((id) => requireMetric(id));
+
+const article = {
+  '@context': 'https://schema.org',
+  '@type': 'Article',
+  headline: study.data.title,
+  description: study.data.summary,
+  author: { '@type': 'Person', name: site.name, url: site.url },
+};
+---
+
+<BaseLayout
+  title={study.data.title}
+  description={study.data.summary}
+  structuredData={article}
+  ogType="article"
+>
+  <article class="study wrap">
+    <a class="study__back" href="/#work">
+      ← All case studies
+    </a>
+    <header class="study__head">
+      <p class="eyebrow">
+        {study.data.company} · {study.data.period}
+      </p>
+      <h1>{study.data.title}</h1>
+      <p class="study__summary">{study.data.summary}</p>
+      <dl class="study__facts">
+        <div>
+          <dt>Role</dt>
+          <dd>{study.data.role}</dd>
+        </div>
+        <div>
+          <dt>Stack</dt>
+          <dd>{study.data.stack.join(', ')}</dd>
+        </div>
+        {headlines.map((m) => (
+          <div>
+            <dt>{m.label}</dt>
+            <dd class="study__metric">{unbreakable(m.value)}</dd>
+          </div>
+        ))}
+      </dl>
+    </header>
+    <div class="prose">
+      <Content />
+    </div>
+    {next && next.id !== study.id && (
+      <nav class="study__next" aria-label="Next case study">
+        <span class="eyebrow">Next case study</span>
+        <a href={`/work/${next.id}`}>{next.data.title} →</a>
+      </nav>
+    )}
+  </article>
+</BaseLayout>
+
+<style>
+  .study {
+    max-width: 780px;
+    padding-block: var(--space-12) var(--space-8);
+  }
+
+  .study__back {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    color: var(--color-muted);
+    font-size: 0.9rem;
+    text-decoration: none;
+  }
+
+  .study__head h1 {
+    margin: 0 0 var(--space-4);
+    font-size: clamp(2rem, 1.4rem + 3vw, 3.2rem);
+  }
+
+  .study__summary {
+    margin: 0 0 var(--space-6);
+    color: var(--color-muted);
+    font-size: var(--text-lg);
+  }
+
+  .study__facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr));
+    gap: var(--space-3);
+    margin: 0 0 var(--space-8);
+  }
+
+  .study__facts div {
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+  }
+
+  .study__facts dt {
+    font-size: 0.72rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+
+  .study__facts dd {
+    margin: 0;
+    font-size: 0.92rem;
+  }
+
+  .study__metric {
+    font-family: var(--font-mono);
+    color: var(--color-good);
+    font-size: 1.1rem !important;
+  }
+
+  .prose :global(h2) {
+    margin: var(--space-8) 0 var(--space-3);
+    font-size: 1.5rem;
+  }
+
+  .prose :global(p),
+  .prose :global(li) {
+    font-size: 1.02rem;
+    line-height: 1.75;
+  }
+
+  .prose :global(code) {
+    padding: 0.1em 0.35em;
+    border-radius: 5px;
+    background: var(--color-sunken);
+    font-size: 0.9em;
+  }
+
+  .study__next {
+    display: flex;
+    flex-direction: column;
+    margin-top: var(--space-12);
+    padding: var(--space-6);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-lg);
+    background: var(--color-surface);
+  }
+
+  .study__next a {
+    font-weight: 600;
+    font-size: 1.1rem;
+  }
+</style>

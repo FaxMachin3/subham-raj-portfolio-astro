@@ -1,0 +1,42 @@
+---
+title: The chat UI for Orion, TRM's AI investigation assistant
+summary: I built the chat interface for Co-Case Agent, now Orion, launched in March 2026, and shaped how investigators interact with the graph through it.
+company: TRM Labs
+period: Launched March 2026
+role: Built the chat UI
+stack: [React, TypeScript, Streaming, Virtualization]
+metrics: [orionLaunch]
+order: 3
+---
+
+## Context
+
+Co-Case Agent, now **Orion**, is TRM's AI investigation assistant. Investigators ask questions in plain
+language and the assistant answers with evidence from the investigation, including the graph. I built the
+chat interface it shipped with in **March 2026**.
+
+## What I built
+
+- **A streaming, virtualized transcript.** Answers stream in token by token, and long sessions stay fast
+  because only what is on screen is rendered.
+- **Collapsible chain-of-thought.** Investigators can see how an answer was reached without the reasoning
+  crowding the conversation.
+- **Answers linked to the graph.** Chips in an answer jump to the matching node on the investigation
+  graph, so the conversation and the evidence stay connected.
+- **A detachable pop-out window**, so the assistant can sit beside the graph instead of covering it.
+
+## Product decisions
+
+While working on advanced graph selection, I built several working prototypes with AI agents and tested
+them with TRM's internal investigators before committing to a design. Feedback was mixed, so the plan
+became combining the strongest parts of each.
+
+I also proposed routing selection prompts through the Orion chat investigators already use, instead of
+adding a second AI agent. That proposal was approved for the first version: one place to
+talk to the product, not two.
+
+## Impact
+
+- Orion's chat UI **launched in March 2026**.
+- The single-assistant direction kept the product simpler for investigators and the codebase simpler for
+  the team.

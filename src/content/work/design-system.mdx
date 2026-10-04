@@ -1,0 +1,52 @@
+---
+title: An accessible design system, proposed and adopted
+summary: Repeated accessibility fixes in our Ant Design usage made the case for our own system. I proposed and built it on Radix UI and Tailwind; all new UI is built on it.
+company: TRM Labs
+period: 2023 – 2026
+role: Proposed and built
+stack: [React, Radix UI, Tailwind CSS, ARIA, Playwright]
+metrics: [designSystemAdoption]
+order: 2
+---
+
+## Context
+
+TRM's UI was built on Ant Design. As a government contract brought accessibility audits, the same problems
+kept coming back: focus that disappeared, controls a keyboard couldn't reach, tab order that jumped around.
+Each fix was local, so the next screen had the same bug.
+
+## Decision
+
+I proposed an in-house design system, built on **Radix UI** primitives and **Tailwind CSS**.
+
+- **Radix for behaviour.** Headless primitives give us focus management, keyboard support and ARIA
+  semantics that are already correct, so we style components instead of re-implementing accessibility.
+- **Our own styling.** Tailwind tokens keep the components consistent with TRM's product, not a library's
+  defaults.
+- **No big-bang migration.** All new UI is built on the system; existing screens move over incrementally.
+  The product never froze for a rewrite.
+
+## Accessibility as a feature
+
+For the government contract I built keyboard-first data tables:
+
+- A roving tabindex, so the table is one Tab stop and arrow keys or **WASD** move between cells.
+- `aria-live` announcements, so screen-reader users hear where they are.
+- An overlay that lets users discover the shortcuts.
+
+I also fixed semantics, tooltip focus and tab order across navigation and side panels. Checks combined
+browser audits, Deque tooling, team review and automated tests.
+
+## Listening to users
+
+When the first dark mode shipped, customers and colleagues found it too dark. I prototyped Dark
+Reader-style controls in several variants and put them in front of people; most preferred a simple
+"Dim" option over a panel of sliders. Prototyping cheaply first kept us from shipping complexity nobody
+wanted.
+
+## Impact
+
+- **All new UI** at TRM is built on the design system.
+- Keyboard and screen-reader support became part of the components, instead of a per-screen chore.
+
+The homepage audits a panel live: keyboard reach, unlabeled controls and WCAG contrast, before and after.

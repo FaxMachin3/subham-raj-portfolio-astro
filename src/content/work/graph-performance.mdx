@@ -1,0 +1,56 @@
+---
+title: Making an investigation graph interactive at scale
+summary: Large investigations froze TRM Forensics' graph. A profiling-led push of 20+ small PRs took plot matching on 1,600 elements from 15.5 s to 14 ms.
+company: TRM Labs
+period: 2023 – 2026
+role: Led the performance push
+stack: [React, TypeScript, KeyLines, Chrome DevTools]
+metrics: [plotMatching, perfPrs]
+order: 1
+---
+
+## Context
+
+TRM Forensics helps investigators at government agencies and financial institutions trace funds across
+blockchain addresses. The investigation graph is the heart of the product, and the biggest investigations
+are the most important ones. They were also the ones that froze: plot matching on 1,600 elements took
+**15.5 seconds**, during which the whole page was unresponsive.
+
+## Constraints
+
+- The graph is rendered by KeyLines, a licensed library. Swapping the renderer was not an option for a fix
+  investigators needed now.
+- Features built on top of the graph (combos, grouping, selections) could not regress.
+- Some government customers run the product inside locked-down, browser-isolated environments, so "works
+  on my machine" was not enough.
+
+## Decisions
+
+**Profile before changing anything.** Profiling pointed at how plot data was built: each incoming node was matched with `array.find` and the accumulated array rebuilt with the spread
+operator. That is quadratic work with a fresh allocation per node, plus constant garbage collection.
+Replacing it with an id-to-index `Map` and a single array made it linear, with identical output.
+
+**Many small PRs, not one rewrite.** I led a series of more than 20 PRs. Each was reviewable, measurable
+and revertable on its own, which kept the risk low on the product's most critical surface.
+
+**Fix the interaction, not just the algorithm.** Opening the sidebar resized the graph while the sidebar
+was also rendering. Rather than redesign it as an overlay, I deferred the sidebar's work until the
+transition finished, which removed the jank without changing the design.
+
+**Close the loop with real customers.** One government customer couldn't plot certain addresses. Comparing
+icon variants showed that SVGs with embedded Base64 data failed after a change in their Menlo
+browser-isolation environment; removing that content fixed it.
+
+## Impact
+
+- Plot matching on 1,600 elements: **15.5 s → 14 ms**, roughly 1,100× faster.
+- Large investigations stay interactive instead of freezing the page.
+
+## What I'd do next
+
+I prototyped a viewport-based graph renderer to test whether owning the rendering layer could outperform
+the licensed library at scale. It was an exploration, handed over for evaluation; the real question it
+raises is long-term maintenance cost versus the licence, and that is a team decision, not a benchmark.
+
+The homepage re-creates this fix live: the "broken" plot uses the same quadratic pattern, calibrated to
+about 1.5 seconds on your device.

@@ -1,0 +1,70 @@
+---
+import { getCollection } from 'astro:content';
+import { formatPeriod } from '@/lib/dates';
+
+const roles = (await getCollection('experience')).sort((a, b) => b.data.start.localeCompare(a.data.start));
+---
+
+<section class="section wrap" id="experience" aria-labelledby="experience-title">
+  <div class="section-head">
+    <h2 id="experience-title">Where I’ve been fixing things</h2>
+  </div>
+  <ol class="roles">
+    {roles.map(({ data }) => (
+      <li class="card">
+        <span class="roles__when mono">{formatPeriod(data.start, data.end)}</span>
+        <h3>{data.company}</h3>
+        <p class="roles__role">{data.role}</p>
+        <p>{data.summary}</p>
+      </li>
+    ))}
+  </ol>
+</section>
+
+<style>
+  .roles {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--space-4);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .roles li {
+    padding: var(--space-4) var(--space-6);
+  }
+
+  .roles__when {
+    font-size: 0.75rem;
+    color: var(--color-muted);
+  }
+
+  .roles h3 {
+    margin: var(--space-1) 0 0;
+    font-size: 1.05rem;
+  }
+
+  .roles p {
+    margin: 0;
+    font-size: 0.86rem;
+    color: var(--color-muted);
+  }
+
+  .roles__role {
+    color: var(--color-ink) !important;
+    margin-bottom: var(--space-1) !important;
+  }
+
+  @media (max-width: 900px) {
+    .roles {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 520px) {
+    .roles {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

@@ -1,0 +1,43 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import Hero from '@/components/sections/Hero.astro';
+import FixesSection from '@/components/sections/FixesSection.astro';
+import ResultsSection from '@/components/sections/ResultsSection.astro';
+import WorkSection from '@/components/sections/WorkSection.astro';
+import LeverageSection from '@/components/sections/LeverageSection.astro';
+import ExperienceSection from '@/components/sections/ExperienceSection.astro';
+import ContactSection from '@/components/sections/ContactSection.astro';
+import HealthBar from '@/components/islands/HealthBar';
+import { site } from '@/data/site';
+import '@/styles/islands.css';
+
+const person = {
+  '@context': 'https://schema.org',
+  '@type': 'Person',
+  name: site.name,
+  jobTitle: site.role,
+  url: site.url,
+  email: `mailto:${site.email}`,
+  address: { '@type': 'PostalAddress', addressLocality: 'Bengaluru', addressCountry: 'IN' },
+  sameAs: [site.links.linkedin, site.links.github],
+  knowsAbout: [
+    'React',
+    'TypeScript',
+    'Web performance',
+    'Accessibility',
+    'Design systems',
+    'Internationalization',
+  ],
+};
+---
+
+<BaseLayout structuredData={person} ogType="profile">
+  <Hero />
+  <FixesSection />
+  <ResultsSection />
+  <WorkSection />
+  <LeverageSection />
+  <ExperienceSection />
+  <ContactSection />
+  <HealthBar client:idle slot="after" />
+</BaseLayout>

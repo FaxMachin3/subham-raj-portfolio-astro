@@ -1,0 +1,175 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { site, skills } from '@/data/site';
+import { formatPeriod } from '@/lib/dates';
+
+const roles = (await getCollection('experience')).sort((a, b) => b.data.start.localeCompare(a.data.start));
+---
+
+<BaseLayout title="Résumé" description={`Résumé of ${site.name}, ${site.role}.`}>
+  <div class="resume wrap">
+    <header class="resume__head">
+      <div>
+        <h1>{site.name}</h1>
+        <p class="resume__role">
+          {site.role} · {site.location}
+        </p>
+      </div>
+      <a class="btn btn--solid" href={site.links.resumePdf} download>
+        Download PDF
+      </a>
+    </header>
+    <p class="resume__summary">
+      Senior frontend engineer with 8 years building data-heavy web apps in fintech, analytics and blockchain
+      intelligence. I specialize in React and TypeScript performance, accessible design systems and AI product
+      UI, and I own features end to end.
+    </p>
+
+    <h2>Experience</h2>
+    {roles.map(({ data }) => (
+      <section class="role" aria-labelledby={`role-${data.id}`}>
+        <div class="role__head">
+          <h3 id={`role-${data.id}`}>
+            {data.company} · <span>{data.role}</span>
+          </h3>
+          <span class="mono">{formatPeriod(data.start, data.end)}</span>
+        </div>
+        <ul>
+          {data.highlights.map((h) => (
+            <li>{h}</li>
+          ))}
+        </ul>
+      </section>
+    ))}
+
+    <h2>Skills</h2>
+    <dl class="skills">
+      {skills.map((s) => (
+        <div>
+          <dt>{s.group}</dt>
+          <dd>{s.items.join(', ')}</dd>
+        </div>
+      ))}
+    </dl>
+
+    <h2>Education</h2>
+    <p>
+      B.Tech, Computer Science · ITER, SOA University, Bhubaneswar · 2014 – 2018 · Google Developer Group
+      Devlympics 2017 finalist
+    </p>
+  </div>
+</BaseLayout>
+
+<style>
+  .resume {
+    max-width: 860px;
+    padding-block: var(--space-12) var(--space-8);
+  }
+
+  .resume__head {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: end;
+    gap: var(--space-4);
+  }
+
+  h1 {
+    margin: 0;
+    font-size: clamp(2.2rem, 1.6rem + 3vw, 3.4rem);
+  }
+
+  .resume__role {
+    margin: var(--space-1) 0 0;
+    color: var(--color-accent);
+  }
+
+  .resume__summary {
+    margin: var(--space-6) 0;
+    font-size: var(--text-lg);
+    color: var(--color-muted);
+  }
+
+  h2 {
+    margin: var(--space-8) 0 var(--space-3);
+    font-size: 0.85rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-accent);
+  }
+
+  .role {
+    margin-bottom: var(--space-6);
+  }
+
+  /* Stacked on narrow screens so the date never flips lines when the web font swaps in. */
+  .role__head {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  @media (min-width: 640px) {
+    .role__head {
+      flex-direction: row;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: var(--space-4);
+    }
+  }
+
+  .role h3 {
+    margin: 0;
+    font-size: 1.1rem;
+  }
+
+  .role h3 span {
+    font-weight: 400;
+    font-style: italic;
+  }
+
+  .role__head .mono {
+    flex-shrink: 0;
+    font-size: 0.8rem;
+    white-space: nowrap;
+    color: var(--color-muted);
+  }
+
+  .role ul {
+    margin: var(--space-2) 0 0;
+    padding-left: 1.2rem;
+  }
+
+  .role li {
+    margin-bottom: var(--space-1);
+  }
+
+  .skills {
+    display: grid;
+    gap: var(--space-2);
+    margin: 0;
+  }
+
+  .skills div {
+    display: grid;
+    grid-template-columns: 14rem 1fr;
+    gap: var(--space-3);
+  }
+
+  .skills dt {
+    font-weight: 600;
+  }
+
+  .skills dd {
+    margin: 0;
+    color: var(--color-muted);
+  }
+
+  @media (max-width: 600px) {
+    .skills div {
+      grid-template-columns: 1fr;
+      gap: 0;
+    }
+  }
+</style>

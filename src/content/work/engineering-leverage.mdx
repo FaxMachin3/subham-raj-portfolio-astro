@@ -1,0 +1,51 @@
+---
+title: Guardrails that make a whole team faster
+summary: Typed API contracts, internationalization checks and AI-agent tooling that caught problems before review, so a fast-moving team could keep shipping safely.
+company: TRM Labs
+period: 2023 – 2026
+role: Proposed and built
+stack: [TypeScript, OpenAPI, GitHub Actions, Cursor, Claude Code]
+metrics: [mergedPrs]
+order: 4
+---
+
+## The problem
+
+TRM ships quickly, and AI-assisted development made it faster still: more PRs, from more people, touching
+more of the codebase. Speed is only an advantage if the mistakes it creates are caught early and cheaply.
+
+## Typed API contracts
+
+Backend response shapes could change without a matching frontend change, and the mismatch surfaced in
+production. I wrote a script that generates types from our OpenAPI spec and runs in a pre-commit hook when
+backend code changes, with CI checks as well. A breaking change now fails type checks **in the backend PR
+itself**, where the backend engineer can coordinate the frontend fix before anything ships.
+
+It is compile-time safety only; runtime validation and contract tests are the natural next step.
+
+## Internationalization that can't drift
+
+I led frontend internationalization. Because TRM's users include governments, translations stay under the
+team's control rather than raw AI output. Translations load lazily and are cached, keys are generated as
+TypeScript types so developers see real text on hover, and pre-commit and CI checks catch untranslated
+strings. Agent rules make AI-written PRs follow the same process.
+
+## Tooling for working with AI agents
+
+- I split a 3,000-line top-level agent instruction file into focused skills that live next to the code
+  they describe, and removed references to files that no longer existed.
+- I wrote a skill for running independent tasks in parallel git worktrees, before cloud agents were common
+  on the team.
+- I wrote Cursor and Claude Code agents the team used day to day.
+
+## Testing culture
+
+As PR volume grew, I pushed for stronger regression coverage, wrote unit and end-to-end tests, and
+proposed the workflow where PR checks flag regressions and deploy failures alert a channel. Another
+engineer built the end-to-end infrastructure; the shared goal was confidence at speed.
+
+## Impact
+
+- Breaking API changes surface in the PR that causes them, not in production.
+- Untranslated text cannot reach `main`.
+- **580+ merged PRs** at TRM Labs, shipped with these guardrails in place.

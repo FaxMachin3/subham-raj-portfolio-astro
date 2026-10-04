@@ -1,0 +1,27 @@
+---
+import { site } from '@/data/site';
+---
+
+<footer class="wrap site-footer">
+  <p>
+    Live demos re-create problems {site.name} fixed in production with synthetic workloads; every live number
+    is measured on your device. Production results are from his work at TRM Labs.
+  </p>
+  <p>
+    Built with Astro, React islands and TypeScript ·
+    <a href="https://github.com/FaxMachin3">Source on GitHub</a>
+  </p>
+</footer>
+
+<style>
+  .site-footer {
+    padding-block: var(--space-8);
+    color: var(--color-muted);
+    font-size: 0.82rem;
+  }
+
+  .site-footer p {
+    margin: 0 0 var(--space-2);
+    max-width: 60rem;
+  }
+</style>

@@ -1,0 +1,75 @@
+---
+const items = [
+  {
+    title: 'Standards other teams build on',
+    body: 'Proposed a Radix + Tailwind design system with accessibility built into the components. All new UI at TRM is built on it.',
+  },
+  {
+    title: 'Contracts across team boundaries',
+    body: 'Generated OpenAPI types in a pre-commit hook and CI, so a breaking backend change fails in the backend PR instead of in production.',
+  },
+  {
+    title: 'Guardrails that scale review',
+    body: 'Typed translation keys and CI checks so untranslated text can’t ship, with agent rules so AI-written PRs follow the same process.',
+  },
+  {
+    title: 'Tooling for an AI-native team',
+    body: 'Split a 3,000-line agent instruction file into scoped skills, built a parallel git-worktree skill, and wrote agents the team used daily.',
+  },
+  {
+    title: 'Prototype before building',
+    body: 'Built working prototypes with AI agents and tested them with internal investigators before committing to a design, then proposed one assistant instead of two.',
+  },
+  {
+    title: 'Confidence at speed',
+    body: 'Pushed for regression coverage as AI-assisted PR volume grew, and led a 20+ PR performance push in small, reviewable, revertable steps.',
+  },
+];
+---
+
+<section class="section wrap" id="leverage" aria-labelledby="leverage-title">
+  <div class="section-head">
+    <h2 id="leverage-title">How I make a team faster</h2>
+    <p>The work that doesn’t show up in a screenshot: systems that make everyone else’s PRs safer.</p>
+  </div>
+  <ol class="leverage">
+    {items.map((item, index) => (
+      <li class="card">
+        <span class="leverage__n mono">0{index + 1}</span>
+        <h3>{item.title}</h3>
+        <p>{item.body}</p>
+      </li>
+    ))}
+  </ol>
+</section>
+
+<style>
+  .leverage {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+    gap: var(--space-4);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .leverage li {
+    padding: var(--space-6);
+  }
+
+  .leverage__n {
+    font-size: 0.75rem;
+    color: var(--color-muted);
+  }
+
+  .leverage h3 {
+    margin: var(--space-2) 0;
+    font-size: 1.05rem;
+  }
+
+  .leverage p {
+    margin: 0;
+    color: var(--color-muted);
+    font-size: 0.9rem;
+  }
+</style>
