@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 import {
   expectNoHorizontalOverflow,
   parseMetric,
@@ -33,6 +33,20 @@ test.describe('homepage', () => {
     await expect(page.locator('#main')).toBeFocused();
   });
 
+  test('toasts always enclose their text with room to spare', async ({ page, isMobile }) => {
+    await page.goto('/');
+    await waitForDemos(page);
+    await tap(isMobile)(page.getByRole('button', { name: 'Break this site' }));
+    const toast = page.locator('.toast--visible');
+    await expect(toast).toContainText('Breaking the site.');
+    const gap = await toast.evaluate((el) => {
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      return el.getBoundingClientRect().bottom - range.getBoundingClientRect().bottom;
+    });
+    expect(gap, 'space between the last line and the toast edge').toBeGreaterThanOrEqual(8);
+  });
+
   test('break → fix: every card breaks, every fix measurably improves things', async ({ page, isMobile }) => {
     const errors = trackErrors(page);
     const press = tap(isMobile);
@@ -42,6 +56,12 @@ test.describe('homepage', () => {
     await press(page.getByRole('button', { name: 'Break this site' }));
     await expect(page.getByRole('button', { name: 'Let Subham fix it' })).toBeEnabled({ timeout: 60_000 });
     await expect(page.locator('html')).toHaveAttribute('data-site', 'broken');
+    for (const word of ['fast', 'accessible', 'global']) {
+      await expect(page.locator('html')).toHaveAttribute(`data-${word}`, 'broken');
+    }
+    await expect(
+      page.getByTestId('controls-next').getByRole('link', { name: 'See what broke ↓' }),
+    ).toBeVisible();
     for (const id of FIXES) {
       await expect(page.getByTestId(`fix-${id}`).getByTestId('status')).toHaveText('Broken');
     }
@@ -53,6 +73,10 @@ test.describe('homepage', () => {
     const shift = await fixPhaseShift();
     if (shift !== null) expect(shift, 'fixing the site must not shift the layout').toBeLessThan(0.01);
     await expect(page.locator('html')).toHaveAttribute('data-site', 'healthy');
+    await expect(page.locator('html')).toHaveAttribute('data-fast', 'healed');
+    await expect(
+      page.getByTestId('controls-next').getByRole('link', { name: 'See your results ↓' }),
+    ).toBeVisible();
 
     const values: Record<string, { before: string; after: string }> = {};
     for (const id of FIXES) {
@@ -71,15 +95,43 @@ test.describe('homepage', () => {
     better('plot');
     better('bundle');
     better('network');
-    expect(parseMetric(values.jank!.after)).toBeLessThanOrEqual(
-      Math.max(1, parseMetric(values.jank!.before)),
-    );
-    expect(values.a11y!.before).toBe('0/12 reachable');
-    expect(values.a11y!.after).toBe('12/12 reachable');
+    // Dropped-frame counts are noisy on a shared CI machine; the broken run's 70 ms blocks are not. Frame
+    // timestamps snap to vsync, so a block reads as 50-67 ms.
+    const longest = async (phase: 'before' | 'after') =>
+      Number(
+        /longest frame (\d+) ms/.exec(
+          (await page.getByTestId('fix-jank').locator(`.metric--${phase} span`).textContent()) ?? '',
+        )?.[1],
+      );
+    const brokenLongest = await longest('before');
+    expect(brokenLongest).toBeGreaterThan(40);
+    expect(await longest('after')).toBeLessThan(brokenLongest);
+    expect(values.a11y!.before).toBe('0/18 reachable');
+    expect(values.a11y!.after).toBe('18/18 reachable');
     expect(values.i18n!.before).toBe('5 of 5');
     expect(values.i18n!.after).toBe('0 of 5');
     await expectNoHorizontalOverflow(page);
     expect(errors).toEqual([]);
+  });
+
+  test('under reduced motion the x-ray is a still frame that explains the fix', async ({
+    page,
+    isMobile,
+  }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto('/');
+    // Rendered only after hydration, so the card's buttons are live from here on.
+    await expect(page.getByText('Breaking is turned off because you prefer reduced motion.')).toBeVisible({
+      timeout: 30_000,
+    });
+    const card = page.getByTestId('fix-a11y');
+    await tap(isMobile)(card.getByRole('button', { name: 'Fix', exact: true }));
+    const xray = card.getByTestId('xray');
+    await expect(xray).toHaveClass(/xray--still/);
+    await expect(card.getByTestId('xray-caption')).toHaveText(
+      'Every control reachable and announced by name.',
+    );
+    await expect(card.getByTestId('status')).toHaveText('Fixed ✓', { timeout: 15_000 });
   });
 
   test('reduced motion disables breaking the whole site but keeps everything readable', async ({ page }) => {
@@ -100,14 +152,96 @@ test.describe('individual demos', () => {
     await waitForDemos(page);
   });
 
-  test('accessible table: arrow keys and WASD move focus and announce it', async ({ page, isMobile }) => {
+  test('accessible table: W/S rows, A/D headers, arrows cells, Enter sorts', async ({ page, isMobile }) => {
     test.skip(isMobile, 'keyboard navigation is a desktop concern');
     const region = page.getByTestId('a11y-region');
+    const live = page.getByTestId('a11y-live');
+    const key = (k: string) => page.keyboard.press(k);
+
     await region.getByRole('cell', { name: '0x9f…a21' }).click();
-    await page.keyboard.press('d');
+    await key('d');
+    await expect(region.getByRole('columnheader', { name: /Address/ })).toBeFocused();
+    await key('d');
+    const typeHeader = region.getByRole('columnheader', { name: /Type/ });
+    await expect(typeHeader).toBeFocused();
+    await key('Enter');
+    await expect(typeHeader).toHaveAttribute('aria-sort', 'ascending');
+    await expect(region.getByRole('status')).toHaveText('Sorted by Type, ascending.');
+
+    await key('s');
+    await expect(region.locator('tbody tr').first()).toBeFocused();
+    await expect(live).toHaveText('Row 1 of 4: 0xa4…19c, Bridge, High risk');
+    await key('S');
+    await expect(region.locator('tbody tr').nth(1)).toBeFocused();
+
+    await key('ArrowRight');
+    await expect(region.getByRole('cell', { name: 'Exchange' })).toBeFocused();
+    await key('ArrowRight');
+    await expect(region.getByRole('cell', { name: 'Low' })).toBeFocused();
+    await expect(live).toHaveText('Row 2, Risk: Low');
+
+    await key('w');
+    await key('w');
+    await key('w');
+    await expect(region.getByRole('columnheader', { name: /Risk/ })).toBeFocused();
+  });
+
+  test('accessible menus: Filter and More actions work from the keyboard', async ({ page, isMobile }) => {
+    test.skip(isMobile, 'keyboard navigation is a desktop concern');
+    const region = page.getByTestId('a11y-region');
+    const filter = region.getByRole('button', { name: 'Filter' });
+    await filter.focus();
+    await page.keyboard.press('Enter');
+    await expect(region.getByRole('menuitemradio', { name: 'All risks' })).toBeFocused();
     await page.keyboard.press('ArrowDown');
-    await expect(region.getByRole('cell', { name: 'Mixer' })).toBeFocused();
-    await expect(page.getByTestId('a11y-live')).toHaveText('Row 2, Type: Mixer');
+    await page.keyboard.press('Enter');
+    await expect(filter).toBeFocused();
+    await expect(filter).toHaveAttribute('aria-expanded', 'false');
+    await expect(region.locator('tbody tr')).toHaveCount(2);
+    await expect(region.getByRole('status')).toHaveText('Showing 2 high-risk.');
+
+    await filter.press('Enter');
+    await page.keyboard.press('Escape');
+    await expect(region.getByRole('menu')).toHaveCount(0);
+    await expect(filter).toBeFocused();
+
+    const more = region.getByRole('button', { name: 'More actions' });
+    await more.focus();
+    await page.keyboard.press('ArrowUp');
+    await expect(region.getByRole('menuitem', { name: 'Reset table' })).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(region.locator('tbody tr')).toHaveCount(4);
+  });
+
+  test('export downloads the visible rows as CSV', async ({ page, isMobile }) => {
+    const region = page.getByTestId('a11y-region');
+    const downloading = page.waitForEvent('download');
+    await tap(isMobile)(region.getByRole('button', { name: 'Export' }));
+    const download = await downloading;
+    expect(download.suggestedFilename()).toBe('linked-addresses.csv');
+    const stream = await download.createReadStream();
+    let csv = '';
+    for await (const chunk of stream) csv += chunk;
+    expect(csv.split('\n')[0]).toBe('Address,Type,Risk');
+    expect(csv.trim().split('\n')).toHaveLength(5);
+  });
+
+  test('broken panel: controls work with a mouse but cannot be reached by keyboard', async ({
+    page,
+    isMobile,
+  }) => {
+    const card = page.getByTestId('fix-a11y');
+    await tap(isMobile)(card.getByRole('button', { name: 'Break', exact: true }));
+    await expect(card.getByTestId('status')).toHaveText('Broken');
+    const region = page.getByTestId('a11y-region');
+    await tap(isMobile)(region.getByText('Filter', { exact: true }));
+    await tap(isMobile)(region.locator('.menu__item', { hasText: 'High' }));
+    await expect(region.locator('tbody tr')).toHaveCount(2);
+    const focusable = await region.evaluate(
+      (el) =>
+        [...el.querySelectorAll<HTMLElement>('[data-interactive]')].filter((n) => n.tabIndex >= 0).length,
+    );
+    expect(focusable).toBe(0);
   });
 
   test('translations load on demand, then come from cache', async ({ page }) => {
@@ -131,6 +265,86 @@ test.describe('individual demos', () => {
       .getByRole('list', { name: 'Entity panels, scrollable' })
       .evaluate((el) => el.scrollTo({ top: el.scrollHeight }));
     await expect.poll(async () => Number(await fetched.textContent())).toBeGreaterThan(initial);
+  });
+
+  test('each hero word breaks and heals with the fix it stands for', async ({ page, isMobile }) => {
+    const html = page.locator('html');
+    await expect(html).not.toHaveAttribute('data-accessible', /.+/);
+    const card = page.getByTestId('fix-a11y');
+    await tap(isMobile)(card.getByRole('button', { name: 'Break', exact: true }));
+    await expect(html).toHaveAttribute('data-accessible', 'broken');
+    await expect(html).not.toHaveAttribute('data-fast', /.+/);
+    await expect(html).toHaveAttribute('data-site', 'broken');
+    await tap(isMobile)(card.getByRole('button', { name: 'Fix', exact: true }));
+    await expect(html).toHaveAttribute('data-accessible', 'healed');
+    await expect(html).toHaveAttribute('data-site', 'healthy');
+  });
+
+  test('an x-ray explains the bug first, then the measured run follows, with no layout shift', async ({
+    page,
+    isMobile,
+  }) => {
+    const card = page.getByTestId('fix-bundle');
+    await card.scrollIntoViewIfNeeded();
+    const shift = await recordLayoutShift(page);
+    await tap(isMobile)(card.getByRole('button', { name: 'Break', exact: true }));
+    const xray = card.getByTestId('xray');
+    await expect(xray).toBeVisible();
+    await expect(xray).toHaveAttribute('aria-label', /X-ray: /);
+    await expect(card.getByTestId('xray-caption')).toHaveAttribute('aria-live', 'polite');
+    await expect(card.getByTestId('xray-caption')).toContainText('loads and runs before anything works');
+    // The measurement has not run while the x-ray plays.
+    await expect(card.getByTestId('status')).toHaveText('Breaking…');
+    await expect(card.getByTestId('metric-before')).toHaveText('—');
+    await expect(xray).toBeHidden({ timeout: 15_000 });
+    await expect(card.getByTestId('status')).toHaveText('Broken');
+    await expect(card.getByTestId('metric-before')).toContainText('KB');
+    const total = await shift();
+    if (total !== null) expect(total, 'the x-ray overlay must not shift the page').toBeLessThan(0.01);
+  });
+
+  test('breaking and fixing a card in view never shifts the page around it', async ({
+    page,
+    browserName,
+    isMobile,
+  }) => {
+    test.skip(browserName !== 'chromium', 'layout-shift entries are Chromium-only');
+    test.setTimeout(150_000);
+    for (const id of ['plot', 'jank', 'bundle', 'network', 'a11y', 'i18n']) {
+      const card = page.getByTestId(`fix-${id}`);
+      await card.locator('.fix-card__demo').evaluate((el) => el.scrollIntoView({ block: 'center' }));
+      const shift = await recordLayoutShift(page, { outsideDemos: true });
+      for (const [button, status] of [
+        ['Break', 'Broken'],
+        ['Fix', 'Fixed ✓'],
+      ] as const) {
+        await tap(isMobile)(card.getByRole('button', { name: button, exact: true }));
+        await expect(card.getByTestId('status')).toHaveText(status, { timeout: 30_000 });
+      }
+      await page.waitForTimeout(300);
+      expect(await shift(), `${id}: layout shift while breaking and fixing`).toBeLessThan(0.01);
+    }
+  });
+
+  test('the x-ray can be skipped', async ({ page, isMobile }) => {
+    const card = page.getByTestId('fix-a11y');
+    await card.scrollIntoViewIfNeeded();
+    await tap(isMobile)(card.getByRole('button', { name: 'Fix', exact: true }));
+    await expect(card.getByTestId('xray')).toBeVisible();
+    await tap(isMobile)(card.getByRole('button', { name: 'Skip' }));
+    await expect(card.getByTestId('xray')).toBeHidden();
+    await expect(card.getByTestId('status')).toHaveText('Fixed ✓', { timeout: 5_000 });
+  });
+
+  test('the x-ray loads only when first needed', async ({ page }) => {
+    const chunks: string[] = [];
+    page.on('request', (r) => /XRay\.[\w-]+\.js/.test(r.url()) && chunks.push(r.url()));
+    await page.goto('/');
+    await waitForDemos(page);
+    await page.waitForTimeout(500);
+    expect(chunks).toHaveLength(0);
+    await page.getByTestId('fix-i18n').getByRole('button', { name: 'Break', exact: true }).click();
+    await expect.poll(() => chunks.length).toBe(1);
   });
 
   test('the healthy page fetches no entity panels until the card is near the screen', async ({ page }) => {

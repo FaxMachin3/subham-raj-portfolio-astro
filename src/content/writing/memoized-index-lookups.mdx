@@ -1,0 +1,82 @@
+---
+title: 'Fixing a 15-second graph freeze with one memoized lookup'
+description: 'How a scan hidden inside a loop froze an investigation graph for 15.5 seconds, and how memoizing indexes in a Map took it to 14 ms on 1,600 elements.'
+published: 2026-10-04
+updated: 2026-10-04
+tags: [performance, react, javascript]
+draft: true
+related: graph-performance
+---
+
+At TRM Labs, plotting a large investigation on the graph froze the page. On 1,600 elements, plot matching
+took **15.5 seconds**. After one change, it took **14 ms**. The change was small; finding it was the work.
+
+## The shape of the bug
+
+Plotting worked through the incoming elements one at a time (simplified here). For each one, it needed to know whether that
+element was already on the graph, and where:
+
+```ts
+const plotted: Element[] = [];
+for (const incoming of elements) {
+  const index = plotted.findIndex((p) => p.id === incoming.id); // scans everything plotted so far
+  if (index === -1) plotted.push(incoming);
+  else plotted[index] = { ...plotted[index], ...incoming };
+}
+```
+
+Nothing here looks slow, and on small graphs it isn't. But `findIndex` is a loop. Inside the outer loop it
+runs up to n times for each of n elements, so the total work grows with n². Double the graph and plotting
+takes four times as long. The biggest investigations, the ones that matter most, hit it hardest.
+
+## The fix
+
+Remember where each element went, so finding it again is a lookup instead of a search:
+
+```ts
+const plotted: Element[] = [];
+const indexById = new Map<string, number>();
+for (const incoming of elements) {
+  const index = indexById.get(incoming.id); // O(1)
+  if (index === undefined) {
+    indexById.set(incoming.id, plotted.length);
+    plotted.push(incoming);
+  } else {
+    plotted[index] = { ...plotted[index], ...incoming };
+  }
+}
+```
+
+Same output, same order, linear work. On 1,600 elements: 15.5 s → 14 ms.
+
+## How to spot it
+
+The profiler pointed at plot matching, not at rendering. That is the useful habit: before changing
+anything, find where the time actually goes. When a hot function has a callback-taking array method
+(`find`, `findIndex`, `filter`, `includes`) inside a loop over the same data, ask whether a `Map` or `Set`
+built once would answer the question in one step.
+
+## The same class of bug, earlier
+
+When the graph still ran on ReGraph, a plotting step built its result in a `reduce` that spread the
+accumulator into a fresh copy on every iteration:
+
+```ts
+const byId = items.reduce((acc, item) => ({ ...acc, [item.id]: item }), {});
+```
+
+Each step copies everything collected so far, so it is quadratic too, with an allocation per element on
+top. Reusing the same accumulator removed the copy:
+
+```ts
+const byId = items.reduce<Record<string, Item>>((acc, item) => {
+  acc[item.id] = item;
+  return acc;
+}, {});
+```
+
+## Try it
+
+The homepage re-creates the bug live. Press **Break** on the first card and the broken version runs
+in your browser, calibrated to freeze for a second or two on your device. Press **Fix** and the memoized
+version plots the same graph in milliseconds. Both timings are measured on your machine.

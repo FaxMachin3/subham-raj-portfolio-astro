@@ -8,6 +8,7 @@
 }
 
 .fix-card {
+  container-type: inline-size;
   position: relative;
   overflow: hidden;
   display: flex;
@@ -38,12 +39,77 @@
 
 .fix-card[data-status='broken'],
 .fix-card[data-status='breaking'] {
-  border-color: #e7b7b2;
+  border-color: var(--color-bad-line);
 }
 
 .fix-card[data-status='broken']::before,
 .fix-card[data-status='breaking']::before {
   transform: none;
+}
+
+/*
+ * State overlays: a glitch as it breaks and a green wipe when fixed. Nothing animates over a card while it
+ * is being fixed: that is when its real measurement runs (its x-ray has already explained the fix).
+ */
+.fix-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.fix-card[data-status='breaking'] {
+  animation: card-glitch 0.45s steps(4) 1;
+}
+
+/*
+ * Transform-only, so the overlays run on the compositor: a repainting animation here would steal frames from
+ * the very demos being measured underneath.
+ */
+.fix-card[data-status='fixed']::after {
+  inset: 0 auto 0 0;
+  width: 45%;
+  background: linear-gradient(100deg, transparent, var(--color-good-bg), transparent);
+  will-change: transform, opacity;
+  animation: wipe 0.9s ease-out 1;
+}
+
+.fix-card[data-status='fixed'] .metric--after strong {
+  animation: metric-in 0.55s var(--ease-spring);
+}
+
+@keyframes card-glitch {
+  25% {
+    transform: translateX(-5px) rotate(-0.6deg);
+  }
+  50% {
+    transform: translateX(4px) rotate(0.5deg);
+  }
+  75% {
+    transform: translateX(-2px);
+  }
+}
+
+@keyframes wipe {
+  0% {
+    opacity: 1;
+    transform: translateX(-100%);
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(240%);
+  }
+}
+
+@keyframes metric-in {
+  from {
+    transform: scale(1.25);
+    opacity: 0;
+  }
 }
 
 html[data-site='broken'] .fix-card[data-status='broken']:nth-child(odd) {
@@ -56,6 +122,7 @@ html[data-site='broken'] .fix-card[data-status='broken']:nth-child(even) {
 
 .fix-card__head {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
   gap: var(--space-3);
@@ -94,6 +161,8 @@ html[data-site='broken'] .fix-card[data-status='broken']:nth-child(even) {
 }
 
 .fix-card__note {
+  flex-basis: 100%;
+  min-height: 1lh;
   font-size: 0.78rem;
   color: var(--color-muted);
 }
@@ -139,7 +208,7 @@ html[data-site='broken'] .fix-card[data-status='broken']:nth-child(even) {
 
 .status-pill--fixed {
   background: var(--color-good);
-  color: #fff;
+  color: var(--color-on-good);
   animation: stamp 0.5s var(--ease-spring);
 }
 
@@ -188,6 +257,8 @@ html[data-site='broken'] .fix-card[data-status='broken']:nth-child(even) {
 
 .metric span {
   display: block;
+  /* Room for a two-line result, so measurements appearing never push the rest of the page down. */
+  min-height: 2lh;
   font-size: 0.74rem;
   color: var(--color-muted);
 }
@@ -197,7 +268,7 @@ html[data-site='broken'] .fix-card[data-status='broken']:nth-child(even) {
   width: 100%;
   height: 200px;
   border-radius: 10px;
-  background: #0f1115;
+  background: var(--color-night-panel);
 }
 
 .freeze-overlay {
@@ -219,7 +290,7 @@ html[data-site='broken'] .fix-card[data-status='broken']:nth-child(even) {
   height: 170px;
   overflow: hidden;
   border-radius: 10px;
-  background: #0f1115;
+  background: var(--color-night-panel);
 }
 
 .jank-app__side {
@@ -278,7 +349,7 @@ html[data-site='broken'] .fix-card[data-status='broken']:nth-child(even) {
   height: 10px;
   overflow: hidden;
   border-radius: 3px;
-  background: #e2e0d8;
+  background: var(--color-track);
 }
 
 .waterfall__bar {
@@ -315,6 +386,10 @@ html[data-site='broken'] .fix-card[data-status='broken']:nth-child(even) {
   height: 72px;
 }
 
+.late-spacer {
+  height: 72px;
+}
+
 .late-banner,
 .late-skeleton {
   height: 72px;
@@ -327,12 +402,12 @@ html[data-site='broken'] .fix-card[data-status='broken']:nth-child(even) {
   padding: 0 var(--space-4);
   font-size: 0.85rem;
   background: var(--color-busy-bg);
-  color: #4a3900;
+  color: var(--color-busy-ink);
 }
 
 .skeleton,
 .late-skeleton {
-  background: linear-gradient(90deg, #e7e5dd, #f3f2ec, #e7e5dd);
+  background: linear-gradient(90deg, var(--color-skeleton), var(--color-skeleton-hi), var(--color-skeleton));
   background-size: 200% 100%;
   animation: shimmer 1.2s linear infinite;
 }
@@ -420,7 +495,7 @@ html[data-site='broken'] .fix-card[data-status='broken']:nth-child(even) {
   padding: 0.35rem 0.8rem;
   border-radius: 8px;
   border: 1px solid var(--color-line);
-  background: #f6f5f0;
+  background: var(--color-chip);
   color: inherit;
   font: inherit;
   font-size: 0.82rem;
@@ -437,11 +512,11 @@ html[data-site='broken'] .fix-card[data-status='broken']:nth-child(even) {
 .a11y-demo td {
   padding: 0.45rem 0.5rem;
   text-align: left;
-  border-bottom: 1px solid #efeee8;
+  border-bottom: 1px solid var(--color-line-soft);
 }
 
-.a11y-demo td[tabindex='0'] {
-  background: rgb(43 89 195 / 0.1);
+.a11y-demo [tabindex='0'] {
+  background: var(--color-focus-fill);
 }
 
 .a11y-demo p {
@@ -449,9 +524,150 @@ html[data-site='broken'] .fix-card[data-status='broken']:nth-child(even) {
   font-size: 0.82rem;
 }
 
+.a11y-demo th {
+  cursor: pointer;
+  user-select: none;
+}
+
+.a11y-demo td {
+  overflow-wrap: break-word;
+}
+
+.sort-indicator {
+  display: inline-block;
+  margin-left: 0.35em;
+  font-size: 0.75em;
+  color: var(--color-muted);
+}
+
+.a11y-demo th[aria-sort] .sort-indicator {
+  color: var(--color-accent);
+}
+
+.table-wrap {
+  position: relative;
+}
+
+.focus-glide {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+  border: 3px solid var(--color-accent);
+  border-radius: 7px;
+  pointer-events: none;
+  opacity: 0;
+  transition:
+    transform 0.18s cubic-bezier(0.3, 1.2, 0.5, 1),
+    width 0.18s ease,
+    height 0.18s ease,
+    opacity 0.15s;
+}
+
+.focus-glide--on {
+  opacity: 1;
+}
+
+/* The glide is the focus indicator inside the table; the default outline would double it. */
+.a11y-demo--fixed table :focus-visible {
+  outline: none;
+}
+
+.a11y-demo__keys kbd {
+  display: inline-block;
+  min-width: 1.6em;
+  margin-right: 2px;
+  padding: 0 0.3em;
+  border: 1px solid var(--color-line);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  background: var(--color-chip);
+  font-size: 0.72rem;
+  text-align: center;
+}
+
+.a11y-demo__keys--none {
+  position: relative;
+}
+
+.a11y-demo__keys-ghost {
+  visibility: hidden;
+}
+
+.a11y-demo__keys-message {
+  position: absolute;
+  inset: 0;
+}
+
+.a11y-demo .a11y-demo__keys,
+.a11y-demo .a11y-demo__status {
+  font-size: 0.76rem;
+  color: var(--color-muted);
+}
+
+.a11y-demo .a11y-demo__status {
+  min-height: 1.5em;
+  margin-top: var(--space-1);
+}
+
+.menu {
+  position: relative;
+}
+
+.menu__list {
+  animation: menu-in 0.14s ease-out;
+  transform-origin: top left;
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 5;
+  min-width: 11rem;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  border: 1px solid var(--color-line);
+  border-radius: 10px;
+  background: var(--color-surface);
+  box-shadow: 0 12px 28px -12px rgb(0 0 0 / 0.35);
+}
+
+.menu--end .menu__list {
+  left: auto;
+  right: 0;
+  transform-origin: top right;
+}
+
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(-4px);
+  }
+}
+
+.menu__item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 36px;
+  padding: 0.3rem 0.6rem;
+  border-radius: 7px;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.menu__item:hover,
+.menu__item:focus-visible {
+  background: var(--color-hover);
+}
+
+.menu__check {
+  width: 1em;
+  color: var(--color-good);
+}
+
 /* The broken variant is intentionally faint and has no focus indicator. */
 .a11y-demo--broken {
-  background: #d9d8d2;
+  background: var(--color-broken-bg);
 }
 
 .a11y-demo--broken *,
@@ -463,11 +679,12 @@ html[data-site='broken'] .fix-card[data-status='broken']:nth-child(even) {
 .a11y-demo--broken th,
 .a11y-demo--broken td,
 .a11y-demo--broken p {
-  color: #a3a29b;
+  color: var(--color-broken-ink);
 }
 
 /* ---------- i18n demo ---------- */
 .i18n-panel {
+  animation: lang-in 0.35s ease-out;
   padding: var(--space-4);
   border-radius: 10px;
   border: 1px solid var(--color-line);
@@ -492,15 +709,15 @@ html[data-site='broken'] .fix-card[data-status='broken']:nth-child(even) {
   font-size: 0.8rem;
 }
 
-.i18n-panel__chips span {
+.i18n-panel__chips > span {
   padding: 0.2rem 0.6rem;
   border-radius: 999px;
-  background: #f1efe8;
+  background: var(--color-sunken);
 }
 
 .i18n-panel__chips .primary {
   background: var(--color-ink);
-  color: #fff;
+  color: var(--color-on-ink);
 }
 
 .raw-key {
@@ -516,6 +733,11 @@ html[data-site='broken'] .fix-card[data-status='broken']:nth-child(even) {
   flex-wrap: wrap;
   margin-bottom: var(--space-3);
   font-size: 0.8rem;
+}
+
+.i18n-note {
+  flex-basis: 100%;
+  min-height: 1lh;
 }
 
 .i18n-controls select {
@@ -538,6 +760,12 @@ html[data-site='broken'] .fix-card[data-status='broken']:nth-child(even) {
   font-size: 0.72rem;
 }
 
+@keyframes lang-in {
+  from {
+    transform: translateY(6px) scale(0.99);
+  }
+}
+
 /* ---------- results ---------- */
 .results-scroll {
   overflow-x: auto;
@@ -558,7 +786,7 @@ html[data-site='broken'] .fix-card[data-status='broken']:nth-child(even) {
 .results td {
   padding: var(--space-3) var(--space-4);
   text-align: left;
-  border-bottom: 1px solid #ecebe5;
+  border-bottom: 1px solid var(--color-line-soft);
   vertical-align: top;
 }
 
@@ -571,7 +799,7 @@ html[data-site='broken'] .fix-card[data-status='broken']:nth-child(even) {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--color-muted);
-  background: #faf9f5;
+  background: var(--color-table-head);
 }
 
 .results tbody th {
@@ -603,20 +831,47 @@ html[data-site='broken'] .fix-card[data-status='broken']:nth-child(even) {
 }
 
 .pr-badge {
+  display: inline-block;
   padding: 0.2rem 0.75rem;
   border-radius: 999px;
   font-weight: 600;
   font-size: 0.78rem;
-  color: #fff;
+  color: var(--color-on-good);
   background: var(--color-good);
 }
 
 .pr-badge--merged {
-  background: #7a3fd1;
+  animation: merged 0.8s var(--ease-spring);
+  background: var(--color-merged);
+  color: var(--color-on-merged);
 }
 
 .pr-badge--none {
   background: var(--color-muted);
+  color: var(--color-on-ink);
+}
+
+@keyframes merged {
+  0% {
+    transform: scale(0.6);
+    box-shadow: 0 0 0 0 var(--color-merged);
+  }
+  60% {
+    transform: scale(1.1);
+    box-shadow: 0 0 0 10px transparent;
+  }
+}
+
+.results--merged tbody tr {
+  animation: row-in 0.5s ease-out both;
+  animation-delay: calc(var(--i) * 90ms);
+}
+
+@keyframes row-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
 }
 
 /* ---------- controls + toast ---------- */
@@ -630,6 +885,29 @@ html[data-site='broken'] .fix-card[data-status='broken']:nth-child(even) {
 .controls .btn {
   /* Labels change between states ("Fixing…" / "Let Subham fix it"); a stable width avoids layout shift. */
   min-width: 11.5rem;
+}
+
+.controls__next {
+  flex-basis: 100%;
+  min-height: 1.6em;
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--color-muted);
+}
+
+.controls__next a {
+  display: inline-block;
+  color: var(--color-ink);
+  font-weight: 600;
+  text-underline-offset: 3px;
+  animation: next-in 0.4s ease-out;
+}
+
+/* Position only: fading text would briefly fail contrast. */
+@keyframes next-in {
+  from {
+    transform: translateY(-6px);
+  }
 }
 
 .controls__note {
@@ -646,20 +924,19 @@ html[data-site='broken'] .fix-card[data-status='broken']:nth-child(even) {
   width: min(440px, calc(100vw - 2rem));
   transform: translateX(-50%);
   pointer-events: none;
-  /* Isolated from page layout so message changes never register as layout shift. */
-  contain: strict;
-  height: 5.5rem;
+  /* Fixed and layout-contained: the toast can grow with its text without moving anything on the page. */
+  contain: layout style;
 }
 
 .toast {
-  padding: 0.65rem 0.9rem;
+  padding: 0.7rem 0.95rem 0.8rem;
   border-radius: 12px;
   background: var(--color-night);
+  border: 1px solid var(--color-night-edge);
   color: #fff;
   font-family: var(--font-mono);
   font-size: 0.8rem;
-  height: 5.2em;
-  overflow: hidden;
+  line-height: 1.5;
   box-shadow: 0 12px 30px -12px rgb(0 0 0 / 0.5);
   /* Shown and hidden instantly: no fade (text at partial contrast) and no slide (layout shift). */
   display: none;
@@ -672,12 +949,48 @@ html[data-site='broken'] .fix-card[data-status='broken']:nth-child(even) {
 .toast strong {
   /* Own line: if the body followed the title inline, every title change would shift the body text. */
   display: block;
+  margin-bottom: 0.15rem;
   font-weight: 500;
   color: #34d399;
 }
 
 .toast--warn strong {
   color: var(--color-warn);
+}
+
+.toast__steps {
+  display: flex;
+  gap: 4px;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.toast__steps li {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: rgb(255 255 255 / 0.16);
+  transition: background-color 0.3s;
+}
+
+.toast__steps li[data-state='active'] {
+  background: var(--color-warn);
+  animation: step-pulse 0.8s ease-in-out infinite;
+}
+
+.toast__steps--fix li[data-state='done'] {
+  background: #34d399;
+}
+
+.toast__steps--break li[data-state='done'] {
+  background: #ff6b5e;
+}
+
+@keyframes step-pulse {
+  50% {
+    opacity: 0.45;
+  }
 }
 
 /* ---------- live health bar ---------- */
@@ -693,6 +1006,7 @@ html[data-site='broken'] .fix-card[data-status='broken']:nth-child(even) {
   transform: translateX(-50%);
   border-radius: 14px;
   background: var(--color-night);
+  border: 1px solid var(--color-night-edge);
   color: #e9e9e4;
   font-family: var(--font-mono);
   font-size: 0.74rem;
@@ -715,11 +1029,13 @@ html[data-site='broken'] .fix-card[data-status='broken']:nth-child(even) {
 }
 
 .hud__cell strong {
+  display: inline-block;
   font-size: 0.95rem;
 }
 
 .hud__cell[data-level='good'] strong {
   color: #34d399;
+  animation: hud-good 0.5s ease-out;
 }
 
 .hud__cell[data-level='warn'] strong {
@@ -732,6 +1048,23 @@ html[data-site='broken'] .fix-card[data-status='broken']:nth-child(even) {
 
 .hud__cell[data-level='bad'] strong {
   color: #ff8a7e;
+  animation: hud-bad 0.5s ease-out;
+}
+
+/* Distinct keyframes per level, so the value pulses whenever its level changes. */
+@keyframes hud-good {
+  from {
+    transform: scale(1.3);
+  }
+}
+
+@keyframes hud-bad {
+  25% {
+    transform: translateX(-2px);
+  }
+  75% {
+    transform: translateX(2px);
+  }
 }
 
 .hud__cell[data-level='na'] strong {
@@ -750,6 +1083,82 @@ html[data-site='broken'] .fix-card[data-status='broken']:nth-child(even) {
 
 .hud__short {
   display: none;
+}
+
+/* Narrow cards: results get the full width (two lines at most), and text that changes keeps its space. */
+@container (max-width: 440px) {
+  .metrics {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .metric {
+    min-height: 0;
+  }
+
+  .fix-card__note,
+  .i18n-note,
+  .i18n-panel h4,
+  .i18n-panel p {
+    min-height: 2lh;
+  }
+
+  /* Translations and raw keys wrap differently; two rows of chips are always reserved. */
+  .i18n-panel__chips {
+    min-height: calc(2 * (0.8rem * 1.6 + 0.4rem) + var(--space-2));
+    align-content: flex-start;
+  }
+
+  .route-buttons {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    min-height: calc(3 * 36px + 2 * 6px);
+  }
+}
+
+/* Smallest phones: one route button per row (labels never wrap), a three-line key legend, a tighter table. */
+@container (max-width: 300px) {
+  .route-buttons {
+    grid-template-columns: minmax(0, 1fr);
+    min-height: calc(5 * 36px + 4 * 6px);
+  }
+
+  .i18n-panel p {
+    min-height: 3lh;
+  }
+
+  .i18n-panel__chips {
+    min-height: calc(3 * (0.8rem * 1.6 + 0.4rem) + 2 * var(--space-2));
+  }
+
+  .a11y-demo table {
+    font-size: 0.74rem;
+  }
+
+  .a11y-demo th,
+  .a11y-demo td {
+    padding: 0.4rem 0.3rem;
+  }
+}
+
+@media (forced-colors: active) {
+  .status-pill,
+  .pr-badge,
+  .metric,
+  .hud,
+  .toast,
+  .a11y-demo__ctl,
+  .menu__list {
+    border: 1px solid CanvasText;
+  }
+
+  .a11y-demo [tabindex='0'],
+  .menu__item:focus-visible {
+    outline: 2px solid Highlight;
+  }
+
+  .fix-card[data-status='broken'] {
+    border: 2px dashed CanvasText;
+  }
 }
 
 @media (max-width: 900px) {

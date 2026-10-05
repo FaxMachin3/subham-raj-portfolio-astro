@@ -1,0 +1,73 @@
+---
+import { getPosts } from '@/lib/writing';
+import { formatDate } from '@/lib/dates';
+
+const posts = await getPosts();
+---
+
+{posts.length > 0 && (
+  <section class="section wrap" id="writing" aria-labelledby="writing-title">
+    <div class="section-head" data-reveal>
+      <h2 id="writing-title">Writing</h2>
+      <p>Short technical write-ups from the work behind the demos.</p>
+    </div>
+    <ul class="posts">
+      {posts.map((post) => (
+        <li data-reveal>
+          <a class="post-link card" href={`/writing/${post.id}`}>
+            <span class="mono">
+              {formatDate(post.data.published)}
+              {post.data.draft && ' · draft'}
+            </span>
+            <h3 style={`view-transition-name: post-${post.id}`}>{post.data.title}</h3>
+            <p>{post.data.description}</p>
+          </a>
+        </li>
+      ))}
+    </ul>
+  </section>
+)}
+
+<style>
+  .posts {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+    gap: var(--space-6);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .post-link {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    height: 100%;
+    padding: var(--space-6);
+    text-decoration: none;
+    transition:
+      transform 0.2s,
+      box-shadow 0.2s;
+  }
+
+  .post-link:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: var(--shadow-pop);
+  }
+
+  .post-link .mono {
+    font-size: 0.75rem;
+    color: var(--color-muted);
+  }
+
+  h3 {
+    margin: 0;
+    font-size: 1.2rem;
+  }
+
+  p {
+    margin: 0;
+    color: var(--color-muted);
+    font-size: 0.92rem;
+  }
+</style>

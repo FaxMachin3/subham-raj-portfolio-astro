@@ -66,7 +66,7 @@ export default function I18nFix() {
       value: missing,
       unit: 'missing',
       display: `${missing} of ${I18N_KEYS.length}`,
-      detail: `missing strings in ${LANGUAGES.find((l) => l.code === code)?.label ?? code}`,
+      detail: `missing strings in ${LANGUAGES.find((l) => l.code === code)!.label}`,
       supported: true,
     };
   };
@@ -99,11 +99,11 @@ export default function I18nFix() {
             </option>
           ))}
         </select>
-        <span className="mono" data-testid="i18n-note">
+        <span className="mono i18n-note" data-testid="i18n-note">
           {note}
         </span>
       </div>
-      <div className="i18n-panel" lang={lang} data-testid="i18n-panel">
+      <div className="i18n-panel" key={lang} lang={lang} data-testid="i18n-panel">
         <h4>{text('title')}</h4>
         <p>{text('sub')}</p>
         <div className="i18n-panel__chips">

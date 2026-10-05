@@ -1,11 +1,14 @@
 export const site = {
   name: 'Subham Raj',
   role: 'Senior Frontend Engineer',
+  /** Homepage <title>: name first, then the searches it should be found for (≤ 60 characters). */
+  title: 'Subham Raj · Senior Frontend Engineer, React & Performance',
   location: 'Bengaluru, India',
+  availability: 'Open to remote roles',
   email: 'subhamraj4114@gmail.com',
   url: 'https://subhamraj.dev',
   description:
-    'Subham Raj, Senior Frontend Engineer. 8 years of React and TypeScript. Break this site, then watch him fix it: every number is measured live in your browser.',
+    'Subham Raj is a senior frontend engineer with 8 years of React and TypeScript, specializing in web performance, accessibility and design systems. Break this site, then watch him fix it.',
   links: {
     linkedin: 'https://www.linkedin.com/in/subhamraj/',
     github: 'https://github.com/FaxMachin3',

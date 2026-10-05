@@ -3,17 +3,24 @@ import { getCollection } from 'astro:content';
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import { site, skills } from '@/data/site';
 import { formatPeriod } from '@/lib/dates';
+import { resumeGraph } from '@/lib/seo';
 
 const roles = (await getCollection('experience')).sort((a, b) => b.data.start.localeCompare(a.data.start));
 ---
 
-<BaseLayout title="Résumé" description={`Résumé of ${site.name}, ${site.role}.`}>
+<BaseLayout
+  title="Résumé"
+  description={`Résumé of ${site.name}, ${site.role}: 8 years of React and TypeScript at TRM Labs, Paytm and Infosys. Performance, accessibility, design systems.`}
+  graph={resumeGraph()}
+  ogImage="resume"
+  ogType="profile"
+>
   <div class="resume wrap">
     <header class="resume__head">
       <div>
         <h1>{site.name}</h1>
         <p class="resume__role">
-          {site.role} · {site.location}
+          {site.role} · {site.location} · {site.availability}
         </p>
       </div>
       <a class="btn btn--solid" href={site.links.resumePdf} download>

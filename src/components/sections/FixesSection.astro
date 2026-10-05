@@ -23,12 +23,12 @@ const notes = {
     slowRequest && polling
       ? `At TRM Labs: a ${slowRequest.value} request moved off the entity page’s initial load, and polling went from ${polling.value}.`
       : 'At TRM Labs: slow requests were deferred until needed, and polling backed off.',
-  a11y: `At TRM Labs: an accessible Radix + Tailwind design system (${adoption.value.toLowerCase()} is built on it${migration ? `, ${migration.value} of existing screens migrated` : ''}) and keyboard tables for a government contract.`,
+  a11y: `At TRM Labs: an accessible Radix + Tailwind design system (${adoption.value.charAt(0).toLowerCase()}${adoption.value.slice(1)} is built on it${migration ? `, ${migration.value} of existing screens migrated` : ''}) and keyboard tables for a government contract.`,
 };
 ---
 
 <section class="section wrap" id="fixes" aria-labelledby="fixes-title">
-  <div class="section-head">
+  <div class="section-head" data-reveal>
     <h2 id="fixes-title">Six things I fix for a living</h2>
     <p>
       Each card can be broken and fixed on its own. Problems are re-created with synthetic workloads; the

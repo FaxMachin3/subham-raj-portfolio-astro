@@ -58,7 +58,7 @@ describe('timed', () => {
 
 describe('calibrateCount', () => {
   it('scales with the square root of the target time and respects bounds', () => {
-    const fastMachine = calibrateCount(1600, { measure: (n) => n, sample: 2500 });
+    const fastMachine = calibrateCount(1600, { measure: (n) => n, sample: 2500, max: 20000 });
     expect(fastMachine).toBe(20000); // capped at max on a very fast "device"
     const bounded = calibrateCount(1, { measure: (n) => n, min: 1600 });
     expect(bounded).toBeGreaterThanOrEqual(1600);

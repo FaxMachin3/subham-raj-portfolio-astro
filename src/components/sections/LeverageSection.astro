@@ -28,13 +28,13 @@ const items = [
 ---
 
 <section class="section wrap" id="leverage" aria-labelledby="leverage-title">
-  <div class="section-head">
+  <div class="section-head" data-reveal>
     <h2 id="leverage-title">How I make a team faster</h2>
     <p>The work that doesn’t show up in a screenshot: systems that make everyone else’s PRs safer.</p>
   </div>
   <ol class="leverage">
     {items.map((item, index) => (
-      <li class="card">
+      <li class="card" data-reveal>
         <span class="leverage__n mono">0{index + 1}</span>
         <h3>{item.title}</h3>
         <p>{item.body}</p>

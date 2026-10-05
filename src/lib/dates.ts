@@ -9,3 +9,8 @@ export function formatYearMonth(value: string): string {
 export function formatPeriod(start: string, end: string): string {
   return `${formatYearMonth(start)} – ${formatYearMonth(end)}`;
 }
+
+/** Formats a date as "4 Oct 2026" (UTC, so builds are deterministic). */
+export function formatDate(date: Date): string {
+  return `${date.getUTCDate()} ${MONTHS[date.getUTCMonth()]} ${date.getUTCFullYear()}`;
+}

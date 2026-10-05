@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatPeriod, formatYearMonth } from '@/lib/dates';
+import { formatDate, formatPeriod, formatYearMonth } from '@/lib/dates';
 import { formatCount, formatKB, formatMs } from '@/lab/format';
 import { requestIdle, runWhenIdle } from '@/lab/idle';
 import { FIX_ORDER, BREAK_ORDER, FIX_META } from '@/fixes/registry';
@@ -20,6 +20,7 @@ describe('formatting', () => {
   it('formats experience periods', () => {
     expect(formatYearMonth('2023-11')).toBe('Nov 2023');
     expect(formatYearMonth('2026')).toBe('2026');
+    expect(formatDate(new Date('2026-10-04'))).toBe('4 Oct 2026');
     expect(formatPeriod('2018-04', '2020-10')).toBe('Apr 2018 – Oct 2020');
   });
 });

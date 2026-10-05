@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useStore } from '@nanostores/react';
 import { $ready, $statuses, $targets, recordMeasurement } from '@/stores/fixes';
+import { playXray } from '@/xray/store';
 import type { FixId, Measurement } from './types';
 
 export interface FixHandlers {
@@ -33,8 +34,14 @@ export function useFixLifecycle(id: FixId, handlers: FixHandlers): void {
     const breaking = request.target === 'broken';
     $statuses.setKey(id, breaking ? 'breaking' : 'fixing');
 
-    const run = breaking ? handlersRef.current.break : handlersRef.current.fix;
-    run(controller.signal)
+    const { signal } = controller;
+    // The x-ray explains what is about to happen; the measured run starts only after it, never during.
+    playXray(id, request.target, { quick: request.quick, signal })
+      .then(() => {
+        if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
+        const run = breaking ? handlersRef.current.break : handlersRef.current.fix;
+        return run(signal);
+      })
       .then((measurement) => {
         if (controller.signal.aborted) return;
         recordMeasurement(id, breaking ? 'before' : 'after', measurement);

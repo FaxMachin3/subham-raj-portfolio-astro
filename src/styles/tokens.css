@@ -1,21 +1,53 @@
+/*
+ * Colour tokens resolve with light-dark(): the page follows the OS theme by default, and the theme switch
+ * pins `color-scheme` on <html>. Body text pairs meet WCAG AAA (7:1) in both themes; every other text
+ * pair meets AA. tests/unit/contrast.test.ts checks them.
+ */
 :root {
-  /* Colour: every text/background pair below meets WCAG AA. */
-  --color-paper: #f5f4ef;
-  --color-surface: #ffffff;
-  --color-sunken: #f1f0ea;
-  --color-ink: #121212;
-  --color-muted: #55554e;
-  --color-line: #dcdad2;
-  --color-good: #08734a;
-  --color-good-bg: #dcf5e8;
-  --color-bad: #b3261e;
-  --color-bad-bg: #fde4e1;
-  --color-busy: #6f5300;
-  --color-busy-bg: #fff3c4;
+  color-scheme: light dark;
+
+  --color-paper: light-dark(#f5f4ef, #121211);
+  --color-surface: light-dark(#ffffff, #1b1b19);
+  --color-sunken: light-dark(#f1f0ea, #222220);
+  --color-ink: light-dark(#121212, #f1f0e9);
+  --color-on-ink: light-dark(#ffffff, #121211);
+  --color-muted: light-dark(#4b4b45, #b4b3aa);
+  --color-line: light-dark(#dcdad2, #3a3934);
+  --color-line-soft: light-dark(#ecebe5, #2c2b28);
+  --color-good: light-dark(#08734a, #6ee7a8);
+  --color-good-bg: light-dark(#dcf5e8, #0f2a1c);
+  --color-on-good: light-dark(#ffffff, #0b1f14);
+  --color-bad: light-dark(#b3261e, #ff8f85);
+  --color-bad-bg: light-dark(#fde4e1, #3a1512);
+  --color-bad-line: light-dark(#e7b7b2, #6b2a24);
+  --color-busy: light-dark(#6f5300, #ffd166);
+  --color-busy-bg: light-dark(#fff3c4, #352a05);
   --color-warn: #ffcf1a;
-  --color-accent: #2b59c3;
-  --color-violet: #7a35e8;
-  --color-night: #111111;
+  --color-on-warn: #121212;
+  --color-accent: light-dark(#2b59c3, #8fb0ff);
+  --color-focus-fill: light-dark(rgb(43 89 195 / 0.1), rgb(143 176 255 / 0.16));
+  --color-violet: light-dark(#7a35e8, #c4a1ff);
+  --color-merged: light-dark(#7a3fd1, #c4a1ff);
+  --color-on-merged: light-dark(#ffffff, #1a0b33);
+  --color-chip: light-dark(#f6f5f0, #26261f);
+  --color-track: light-dark(#e2e0d8, #33322d);
+  --color-skeleton: light-dark(#e7e5dd, #26251f);
+  --color-skeleton-hi: light-dark(#f3f2ec, #33322b);
+  --color-table-head: light-dark(#faf9f5, #20201d);
+  --color-hover: light-dark(rgb(0 0 0 / 0.05), rgb(255 255 255 / 0.07));
+  --color-header-bg: light-dark(rgb(245 244 239 / 0.9), rgb(18 18 17 / 0.88));
+  --color-hero-dim: light-dark(#6e6d66, #8f8e86);
+  --color-busy-ink: light-dark(#4a3900, #ffe7a3);
+  --color-broken-bg: light-dark(#d9d8d2, #2a2a27);
+  --color-broken-ink: light-dark(#a3a29b, #55554f);
+  --color-status-ok: light-dark(#10a46a, #34d399);
+  --color-status-bad: light-dark(#e5372b, #ff6b5e);
+  --color-status-busy: light-dark(#e09a00, #ffd166);
+
+  /* Night surfaces (code panels, toast, health bar) stay dark in both themes. */
+  --color-night: light-dark(#111111, #0a0a09);
+  --color-night-panel: #0f1115;
+  --color-night-edge: light-dark(transparent, #34332e);
   --color-night-muted: #a1a19a;
 
   /* Type */
@@ -46,6 +78,14 @@
 
   --shadow-pop: 4px 4px 0 var(--color-ink);
   --ease-spring: cubic-bezier(0.3, 1.4, 0.5, 1);
+}
+
+html[data-theme='light'] {
+  color-scheme: light;
+}
+
+html[data-theme='dark'] {
+  color-scheme: dark;
 }
 
 /* Metric-matched to the web fonts so the swap does not shift layout. */

@@ -9,6 +9,8 @@
 html {
   scroll-behavior: smooth;
   scroll-padding-top: calc(var(--header-height) + var(--space-4));
+  /* The live health bar is fixed to the bottom; keep focused elements clear of it (WCAG 2.4.11). */
+  scroll-padding-bottom: calc(var(--hud-height) + var(--space-6));
   -webkit-text-size-adjust: 100%;
 }
 
@@ -85,7 +87,7 @@ p {
   top: -100px;
   z-index: 100;
   background: var(--color-ink);
-  color: #fff;
+  color: var(--color-on-ink);
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-sm);
 }
@@ -163,12 +165,13 @@ p {
 
 .btn--break {
   background: var(--color-warn);
+  color: var(--color-on-warn);
 }
 
 .btn--fix,
 .btn--solid {
   background: var(--color-ink);
-  color: #fff;
+  color: var(--color-on-ink);
 }
 
 .btn--sm {
@@ -185,7 +188,96 @@ p {
   border-radius: var(--radius-lg);
 }
 
+/* Long-form text: case studies and writing. */
+.prose h2 {
+  margin: var(--space-8) 0 var(--space-3);
+  font-size: 1.5rem;
+}
+
+.prose p,
+.prose li {
+  font-size: 1.02rem;
+  line-height: 1.75;
+}
+
+.prose :not(pre) > code {
+  padding: 0.1em 0.35em;
+  border-radius: 5px;
+  background: var(--color-sunken);
+  font-size: 0.9em;
+}
+
+.prose pre {
+  margin: var(--space-4) 0;
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
+  line-height: 1.6;
+  overflow-x: auto;
+}
+
+.prose table {
+  width: 100%;
+  margin: var(--space-4) 0;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+
+.prose th,
+.prose td {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-line);
+  text-align: left;
+}
+
+/* Page-to-page navigations morph (case-study card title → page heading) in supporting browsers. */
+@view-transition {
+  navigation: auto;
+}
+
+::view-transition-group(*) {
+  animation-duration: 0.35s;
+  animation-timing-function: cubic-bezier(0.3, 1, 0.4, 1);
+}
+
+/*
+ * Scroll-linked entrances. They animate `translate`/`scale` (not opacity, so contrast is never reduced,
+ * and not `transform`, so hover transforms still compose). Browsers without scroll timelines show the
+ * content as is.
+ */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    [data-reveal] {
+      animation: reveal linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 80%;
+    }
+  }
+}
+
+@keyframes reveal {
+  from {
+    translate: 0 32px;
+    scale: 0.97;
+  }
+}
+
+.btn:active:not(:disabled) {
+  transform: translate(0, 0) scale(0.97);
+  box-shadow: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  @view-transition {
+    navigation: none;
+  }
+
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+
   html {
     scroll-behavior: auto;
   }
@@ -196,6 +288,18 @@ p {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* Windows high contrast: the system palette replaces ours, so give shape back to things colour defined. */
+@media (forced-colors: active) {
+  :focus-visible {
+    outline-color: Highlight;
+  }
+
+  .btn,
+  .card {
+    border: 1px solid ButtonText;
   }
 }
 

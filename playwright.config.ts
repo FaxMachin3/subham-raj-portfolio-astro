@@ -1,13 +1,21 @@
 import { defineConfig, devices } from '@playwright/test';
 
 const PORT = 4322;
+const coverage = process.env.COVERAGE === '1';
 
 export default defineConfig({
   testDir: 'tests/e2e',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 1 : 0,
+  // One retry: headless WebKit occasionally crashes a page under heavy parallel load (never reproduced
+  // serially). Retried tests are still reported as "flaky", so a real regression stays visible.
+  retries: 1,
   reporter: [['list'], ['html', { open: 'never' }]],
+  // With COVERAGE=1 (npm run coverage), browser coverage is collected per test and reported at the end.
+  ...(coverage && {
+    globalSetup: './coverage-config/e2e-setup.mjs',
+    globalTeardown: './coverage-config/e2e-teardown.mjs',
+  }),
   timeout: 120_000,
   expect: { timeout: 15_000 },
   use: {

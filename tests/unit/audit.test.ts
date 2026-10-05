@@ -46,4 +46,13 @@ describe('auditRegion', () => {
     expect(report).toMatchObject({ interactive: 7, reachable: 7, unlabeled: 0 });
     expect(report.contrast).toBeGreaterThan(7);
   });
+
+  it('treats sortable headers as part of the same roving tab stop', () => {
+    root.innerHTML = `
+      <table>
+        <thead><tr><th data-interactive tabindex="0">A</th><th data-interactive tabindex="-1">B</th></tr></thead>
+        <tbody><tr><td data-interactive tabindex="-1">a</td><td data-interactive tabindex="-1">b</td></tr></tbody>
+      </table>`;
+    expect(auditRegion(root)).toMatchObject({ interactive: 4, reachable: 4 });
+  });
 });

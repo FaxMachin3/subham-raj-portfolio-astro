@@ -11,7 +11,7 @@ asked for less.
 ## Decision
 
 - **Bounded freezes.** The plot demo calibrates its element count on the visitor's device so the slow path
-  takes about 1.6 s, within fixed minimum and maximum counts.
+  takes a second or two, within fixed minimum and maximum counts.
 - **Bounded traffic.** Broken polling stops after 20 s. Healthy polling runs every 20 s, and only on-screen
   entities are fetched.
 - **Reduced motion.** Demos that freeze the page or add motion cannot be broken when

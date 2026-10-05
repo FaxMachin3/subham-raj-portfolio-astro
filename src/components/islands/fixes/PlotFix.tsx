@@ -7,7 +7,8 @@ import { formatCount, formatMs } from '@/lab/format';
 import type { Measurement } from '@/fixes/types';
 
 const PALETTE = ['#34d399', '#60a5fa', '#f472b6', '#fbbf24', '#a78bfa', '#fb923c'];
-const TARGET_FREEZE_MS = 1600;
+const TARGET_FREEZE_MS = 1200;
+const STREAM_FRAMES = 12;
 
 export default function PlotFix({ productionNote }: { productionNote: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -15,51 +16,78 @@ export default function PlotFix({ productionNote }: { productionNote: string }) 
   const countRef = useRef<number | null>(null);
   const [frozen, setFrozen] = useState(false);
   const [calibration, setCalibration] = useState('');
+  const [plotLabel, setPlotLabel] = useState('Scatter plot of 1,600 graph elements in six clusters');
 
-  const draw = useCallback((nodes: PlotNode[]) => {
+  const streamRef = useRef(0);
+
+  /**
+   * Draws the plot. With `stream`, points arrive over a few frames: after the fix the graph is
+   * responsive while it fills in, where the broken version freezes and then appears all at once.
+   */
+  const draw = useCallback((nodes: PlotNode[], stream = false) => {
     lastNodes.current = nodes;
-    const canvas = canvasRef.current;
-    const ctx = canvas?.getContext('2d');
-    if (!canvas || !ctx) return;
+    const canvas = canvasRef.current!;
+    // Null only where canvas is unsupported; the plot then stays blank and the timings still run.
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
     const { width, height } = canvas.getBoundingClientRect();
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const dpr = Math.min(window.devicePixelRatio, 2);
     canvas.width = width * dpr;
     canvas.height = height * dpr;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, width, height);
     const size = nodes.length > 8000 ? 1.2 : 2;
-    for (const node of nodes) {
-      ctx.fillStyle = PALETTE[node.cluster] ?? PALETTE[0]!;
-      ctx.fillRect(node.x * width, node.y * height, size, size);
+    const paint = (from: number, to: number) => {
+      for (let i = from; i < to; i++) {
+        const node = nodes[i]!;
+        ctx.fillStyle = PALETTE[node.cluster]!;
+        ctx.fillRect(node.x * width, node.y * height, size, size);
+      }
+    };
+
+    const run = ++streamRef.current;
+    if (!stream || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      paint(0, nodes.length);
+      return;
     }
+    const chunk = Math.ceil(nodes.length / STREAM_FRAMES);
+    let done = 0;
+    const step = () => {
+      if (run !== streamRef.current) return;
+      paint(done, Math.min(nodes.length, done + chunk));
+      done += chunk;
+      if (done < nodes.length) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
   }, []);
 
   useEffect(() => {
     draw(plotLinear(generateNodes(1600)));
-    const canvas = canvasRef.current;
-    if (!canvas) return;
     const observer = new ResizeObserver(() => draw(lastNodes.current));
-    observer.observe(canvas);
+    observer.observe(canvasRef.current!);
     return () => observer.disconnect();
   }, [draw]);
 
   const nodeCount = () => {
     if (countRef.current === null) {
       countRef.current = calibrateCount(TARGET_FREEZE_MS);
-      setCalibration(`${formatCount(countRef.current)} elements, calibrated so “before” takes ~1.5 s here`);
+      setCalibration(`${formatCount(countRef.current)} elements, calibrated to ~1–2 s here`);
     }
     return countRef.current;
   };
 
   useFixLifecycle('plot', {
     async break(): Promise<Measurement> {
-      const count = nodeCount();
-      const nodes = generateNodes(count);
       setFrozen(true);
       await afterNextPaint(); // let the overlay paint before the main thread is blocked on purpose
+      const count = nodeCount();
+      const nodes = generateNodes(count);
       const { result, ms } = timed(() => plotQuadratic(nodes));
       setFrozen(false);
       draw(result);
+      setPlotLabel(
+        `Scatter plot of ${formatCount(result.length)} graph elements in six clusters, plotted by the broken version in ${formatMs(ms)}`,
+      );
       return {
         value: ms,
         unit: 'ms',
@@ -73,7 +101,10 @@ export default function PlotFix({ productionNote }: { productionNote: string }) 
       const nodes = generateNodes(count);
       await afterNextPaint();
       const { result, ms } = timed(() => plotLinear(nodes));
-      draw(result);
+      draw(result, true);
+      setPlotLabel(
+        `Scatter plot of ${formatCount(result.length)} graph elements in six clusters, plotted by the fixed version in ${formatMs(ms)}`,
+      );
       return {
         value: ms,
         unit: 'ms',
@@ -93,21 +124,17 @@ export default function PlotFix({ productionNote }: { productionNote: string }) 
       title="A graph that freezes while plotting"
       description={
         <>
-          The broken version matches incoming nodes with <code>array.find</code> and rebuilds the array with
-          the spread operator on every step: quadratic work that blocks the main thread. The fix uses a Map
-          and a single array: linear work, identical output.
+          The broken version finds each incoming element&rsquo;s index by scanning everything already plotted
+          (<code>findIndex</code> inside the loop): quadratic work that blocks the main thread. The fix
+          memoizes each element&rsquo;s index in a <code>Map</code> as it is plotted, so every lookup is O(1):
+          linear work, identical output.
         </>
       }
       measureLabel={{ before: 'measured', after: 'measured' }}
       footnote={calibration}
       productionNote={productionNote}
     >
-      <canvas
-        ref={canvasRef}
-        className="plot-canvas"
-        role="img"
-        aria-label="Scatter plot of plotted graph elements"
-      />
+      <canvas ref={canvasRef} className="plot-canvas" role="img" aria-label={plotLabel} />
       {frozen && (
         <div className="freeze-overlay" aria-hidden="true">
           Main thread frozen on purpose… everything on this page has stopped.

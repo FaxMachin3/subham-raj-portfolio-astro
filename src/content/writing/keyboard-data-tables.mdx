@@ -1,0 +1,60 @@
+---
+title: 'Keyboard data tables: rows, headers and cells, one Tab stop'
+description: 'A keyboard model for data tables that keeps one Tab stop, moves by row, header or cell, sorts with Enter and still reads well in a screen reader.'
+published: 2026-10-04
+updated: 2026-10-04
+tags: [accessibility, react, design-systems]
+draft: true
+related: design-system
+---
+
+Data tables are where many products quietly stop working for keyboard users. Clickable `div`s, actions
+that only appear on hover, and twenty Tab stops per row are all common. At TRM Labs I built keyboard-first
+data tables for a government contract; this post walks through the model behind the Fix 05 demo on my
+homepage, which you can try right there.
+
+## One Tab stop for the whole table
+
+Tab should move between components, not between every cell. The table gets a single Tab stop using a
+_roving tabindex_: exactly one element inside it has `tabindex="0"`, and every other row, header and cell
+has `tabindex="-1"`. Arrow keys move that one tab stop around. Tab leaves the table and Shift+Tab comes
+back to the same place.
+
+## Three ways to move
+
+Different tasks need different granularity, so the demo separates them:
+
+| Keys            | Moves between                                       |
+| --------------- | --------------------------------------------------- |
+| `W` / `S`       | Whole rows; `S` from a header goes to the first row |
+| `A` / `D`       | Column headers                                      |
+| Arrow keys      | Individual cells                                    |
+| `Enter`/`Space` | On a header, sorts by that column                   |
+
+Each family starts from the first row, header or cell, then moves from wherever focus is. The logic is a
+pure function, `moveFocus(focus, key) → nextFocus`, so every rule is unit tested without a browser.
+
+## Keep the semantics native
+
+It is still a real `<table>` with `<th scope="col">`. Sorting sets `aria-sort` on the active header, so a
+screen reader announces "sorted ascending" without extra work. A polite live region announces where focus
+lands ("Row 2 of 4: 0x3c…7e0, Mixer, High risk"), because a focused row has no name of its own.
+
+## Single-letter shortcuts, safely
+
+WCAG 2.1.4 warns about single-character shortcuts: they can fire by accident, especially for speech-input
+users. The exception is shortcuts that only work while the component has focus. W/A/S/D here only act
+inside the table, so typing anywhere else is unaffected. A visible key legend under the table makes them
+discoverable.
+
+## Menus that work without a mouse
+
+The toolbar's Filter and "⋯" buttons follow the WAI-ARIA menu button pattern: Enter, Space or ArrowDown
+opens the menu and focuses an item, arrows move, Escape closes and returns focus to the button. Export is a
+plain button that downloads the visible rows as CSV.
+
+## Prove it
+
+Automated checks catch a lot: axe runs on every page in light and dark themes. But "can a keyboard user do
+the task?" needs its own tests. Playwright drives the table with W, A, S, D, arrows and Enter, opens the
+menus from the keyboard, and asserts that in the deliberately broken version nothing is reachable at all.

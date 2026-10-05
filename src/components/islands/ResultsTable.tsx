@@ -1,6 +1,8 @@
+import type { CSSProperties } from 'react';
 import { useStore } from '@nanostores/react';
 import { $prState, $results } from '@/stores/fixes';
 import { FIX_IDS, type FixId, type Measurement } from '@/fixes/types';
+import CountUp from './CountUp';
 
 const LABELS: Record<FixId, string> = {
   plot: 'Plot matching',
@@ -26,7 +28,7 @@ export default function ResultsTable({ production }: { production: Record<FixId,
         <span>PR #581 · Let Subham fix it</span>
       </div>
       <div className="results-scroll" tabIndex={0} role="region" aria-label="Session results, scrollable">
-        <table className="results">
+        <table className={`results${pr === 'merged' ? ' results--merged' : ''}`}>
           <caption className="sr-only">
             Before and after measurements from this session, with production results
           </caption>
@@ -39,11 +41,13 @@ export default function ResultsTable({ production }: { production: Record<FixId,
             </tr>
           </thead>
           <tbody>
-            {FIX_IDS.map((id) => (
-              <tr key={id}>
+            {FIX_IDS.map((id, i) => (
+              <tr key={id} style={{ '--i': i } as CSSProperties}>
                 <th scope="row">{LABELS[id]}</th>
                 <td className="before">{show(results[id].before)}</td>
-                <td className="after">{show(results[id].after)}</td>
+                <td className="after">
+                  <CountUp text={show(results[id].after)} />
+                </td>
                 <td>{production[id]}</td>
               </tr>
             ))}

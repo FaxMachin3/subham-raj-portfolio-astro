@@ -1,0 +1,106 @@
+---
+import type { GetStaticPaths } from 'astro';
+import { render } from 'astro:content';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { articleGraph } from '@/lib/seo';
+import { getPosts } from '@/lib/writing';
+import { formatDate } from '@/lib/dates';
+
+export const getStaticPaths = (async () => {
+  const posts = await getPosts();
+  return posts.map((post) => ({ params: { slug: post.id }, props: { post } }));
+}) satisfies GetStaticPaths;
+
+const { post } = Astro.props;
+const { Content } = await render(post);
+const path = `/writing/${post.id}`;
+const graph = articleGraph({
+  path,
+  title: post.data.title,
+  description: post.data.description,
+  published: post.data.published,
+  updated: post.data.updated,
+  keywords: post.data.tags,
+  section: 'Writing',
+  image: `/og/writing-${post.id}.png`,
+});
+---
+
+<BaseLayout
+  title={post.data.title}
+  description={post.data.description}
+  graph={graph}
+  ogType="article"
+  ogImage={`writing-${post.id}`}
+  published={post.data.published}
+  updated={post.data.updated}
+>
+  <article class="post wrap">
+    <a class="post__back" href="/#writing">
+      ← All writing
+    </a>
+    {post.data.draft && <p class="post__draft">Draft: visible in development only.</p>}
+    <header>
+      <p class="eyebrow">
+        <time datetime={post.data.published.toISOString().slice(0, 10)}>
+          {formatDate(post.data.published)}
+        </time>
+        · {post.data.tags.join(' · ')}
+      </p>
+      <h1 style={`view-transition-name: post-${post.id}`}>{post.data.title}</h1>
+      <p class="post__summary">{post.data.description}</p>
+    </header>
+    <div class="prose">
+      <Content />
+    </div>
+    {post.data.related && (
+      <p class="post__related">
+        Related case study: <a href={`/work/${post.data.related}`}>read the full story →</a>
+      </p>
+    )}
+  </article>
+</BaseLayout>
+
+<style>
+  .post {
+    max-width: 760px;
+    padding-block: var(--space-12) var(--space-8);
+  }
+
+  .post__back {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    color: var(--color-muted);
+    font-size: 0.9rem;
+    text-decoration: none;
+  }
+
+  .post__draft {
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-sm);
+    background: var(--color-busy-bg);
+    color: var(--color-busy);
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+  }
+
+  h1 {
+    margin: 0 0 var(--space-4);
+    font-size: clamp(2rem, 1.4rem + 3vw, 3rem);
+  }
+
+  .post__summary {
+    margin: 0 0 var(--space-8);
+    color: var(--color-muted);
+    font-size: var(--text-lg);
+  }
+
+  .post__related {
+    margin-top: var(--space-12);
+    padding: var(--space-4) var(--space-6);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-lg);
+    background: var(--color-surface);
+  }
+</style>

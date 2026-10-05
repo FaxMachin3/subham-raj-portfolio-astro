@@ -4,7 +4,12 @@ import { site } from '@/data/site';
 
 <section class="wrap" id="contact" aria-labelledby="contact-title">
   <div class="contact">
-    <h2 id="contact-title">Got something that needs fixing?</h2>
+    <div>
+      <h2 id="contact-title">Got something that needs fixing?</h2>
+      <p class="contact__meta">
+        {site.location} · {site.availability.toLowerCase()}
+      </p>
+    </div>
     <div class="contact__links">
       <a class="btn btn--light" href={`mailto:${site.email}`}>
         Email me
@@ -33,7 +38,7 @@ import { site } from '@/data/site';
     padding: clamp(1.75rem, 5vw, 3.75rem);
     border-radius: var(--radius-xl);
     background: var(--color-ink);
-    color: #fff;
+    color: var(--color-on-ink);
   }
 
   h2 {
@@ -43,6 +48,13 @@ import { site } from '@/data/site';
     letter-spacing: -0.03em;
   }
 
+  .contact__meta {
+    margin: var(--space-3) 0 0;
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    opacity: 0.85;
+  }
+
   .contact__links {
     display: flex;
     flex-wrap: wrap;
@@ -50,14 +62,14 @@ import { site } from '@/data/site';
   }
 
   .btn--light {
-    background: #fff;
-    border-color: #fff;
+    background: var(--color-on-ink);
+    border-color: var(--color-on-ink);
     color: var(--color-ink);
   }
 
   .btn--outline-light {
-    border-color: #fff;
-    color: #fff;
+    border-color: var(--color-on-ink);
+    color: var(--color-on-ink);
   }
 
   .contact .btn:hover {

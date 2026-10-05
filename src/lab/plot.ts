@@ -43,21 +43,20 @@ export function generateNodes(count: number, seed = 7): PlotNode[] {
 }
 
 /**
- * The broken implementation, kept deliberately: `find` scans the array and the spread copies it on
- * every step, so the work is O(n²) and allocates a new array per node.
+ * The broken implementation, kept deliberately: every incoming node looks up its index by scanning
+ * everything already plotted, so the inner loop runs up to n times per node and the work is O(n²).
  */
 export function plotQuadratic(incoming: readonly PlotNode[]): PlotNode[] {
-  let plotted: PlotNode[] = [];
+  const plotted: PlotNode[] = [];
   for (const node of incoming) {
-    const existing = plotted.find((p) => p.id === node.id);
-    plotted = existing
-      ? plotted.map((p) => (p.id === node.id ? { ...p, ...node } : p))
-      : [...plotted, { ...node }];
+    const index = plotted.findIndex((p) => p.id === node.id);
+    if (index === -1) plotted.push({ ...node });
+    else plotted[index] = { ...plotted[index]!, ...node };
   }
   return plotted;
 }
 
-/** The fix: an id → index Map and a single array. O(n), same output order. */
+/** The fix: memoize each id's index as it is plotted, so every lookup is O(1) and the work is O(n). */
 export function plotLinear(incoming: readonly PlotNode[]): PlotNode[] {
   const indexById = new Map<string, number>();
   const plotted: PlotNode[] = [];
@@ -82,10 +81,6 @@ export function timed<T>(
   return { result, ms: now() - start };
 }
 
-/**
- * Picks a node count so the quadratic version takes about `targetMs` on this device: dramatic on a
- * laptop, never punishing on a slow phone. Quadratic cost means n scales with the square root.
- */
 interface CalibrationOptions {
   sample?: number;
   min?: number;
@@ -94,14 +89,24 @@ interface CalibrationOptions {
   measure?: (incoming: readonly PlotNode[]) => unknown;
 }
 
+/**
+ * Picks a node count so the quadratic version takes about `targetMs` on this device: dramatic on a
+ * laptop, never punishing on a slow phone. Quadratic cost means n scales with the square root.
+ * A small sample under-predicts at large n (cache effects differ by engine), so a second probe at
+ * about a third of the first estimate refines it; that probe costs roughly a ninth of the target.
+ */
 export function calibrateCount(
   targetMs: number,
-  { sample = 2500, min = 1600, max = 20000, measure = plotQuadratic }: CalibrationOptions = {},
+  { sample = 4000, min = 1600, max = 80000, measure = plotQuadratic }: CalibrationOptions = {},
 ): number {
-  const nodes = generateNodes(sample);
-  measure(nodes.slice(0, 300)); // warm up the JIT so the sample isn't dominated by compilation
-  const { ms } = timed(() => measure(nodes));
-  const perNodeSquared = Math.max(ms, 0.5) / (sample * sample);
-  const count = Math.sqrt(targetMs / perNodeSquared);
-  return Math.max(min, Math.min(max, Math.round(count / 100) * 100));
+  const clamp = (n: number) => Math.max(min, Math.min(max, Math.round(n / 100) * 100));
+  const extrapolate = (size: number) => {
+    const { ms } = timed(() => measure(generateNodes(size)));
+    return Math.sqrt(targetMs / (Math.max(ms, 0.5) / (size * size)));
+  };
+
+  measure(generateNodes(1500)); // warm up the JIT so the sample isn't dominated by compilation
+  const first = extrapolate(sample);
+  const probe = Math.round(first / 3);
+  return clamp(probe > sample ? extrapolate(probe) : first);
 }

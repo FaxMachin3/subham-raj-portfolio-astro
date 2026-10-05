@@ -75,3 +75,21 @@ describe('fix store', () => {
     expect($session.get()).toBe(session + 1);
   });
 });
+
+describe('waitForStatus', () => {
+  it('resolves at once when the fix is already there', async () => {
+    $statuses.setKey('bundle', 'fixed');
+    await expect(waitForStatus('bundle', 'fixed')).resolves.toBeUndefined();
+  });
+
+  it('waits through unrelated changes until the fix reaches the status', async () => {
+    let resolved = false;
+    const waiting = waitForStatus('plot', 'broken').then(() => (resolved = true));
+    $statuses.setKey('jank', 'breaking');
+    await Promise.resolve();
+    expect(resolved).toBe(false);
+    $statuses.setKey('plot', 'broken');
+    await waiting;
+    expect(resolved).toBe(true);
+  });
+});

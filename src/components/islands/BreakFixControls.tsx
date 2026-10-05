@@ -9,15 +9,19 @@ import {
   startSession,
   waitForStatus,
 } from '@/stores/fixes';
-import { BREAK_ORDER, FIX_META, FIX_ORDER } from '@/fixes/registry';
-import { FIX_IDS } from '@/fixes/types';
+import { BREAK_ORDER, FIX_META, FIX_ORDER, HERO_WORDS } from '@/fixes/registry';
+import { FIX_IDS, type FixId, type FixStatus } from '@/fixes/types';
 import { clearRequestLog } from '@/lab/requests';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { useHydrated } from '@/lib/useHydrated';
 
-const STAGGER_MS = 220;
-const BETWEEN_FIXES_MS = 1100;
+const STAGGER_MS = 260;
+const BETWEEN_FIXES_MS = 900;
+const MERGED_GLOW_MS = 1600;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+type Phase = 'idle' | 'breaking' | 'broken' | 'fixing' | 'fixed';
+type StepState = 'pending' | 'active' | 'done';
 
 interface Toast {
   title: string;
@@ -25,45 +29,87 @@ interface Toast {
   tone: 'info' | 'warn';
 }
 
+interface Progress {
+  mode: 'break' | 'fix';
+  order: readonly FixId[];
+  steps: Partial<Record<FixId, StepState>>;
+}
+
+const isBroken = (status: FixStatus) => status === 'broken' || status === 'breaking' || status === 'fixing';
+
 export default function BreakFixControls() {
   const hydrated = useHydrated();
   const ready = allReady(useStore($ready)) && hydrated;
   const statuses = useStore($statuses);
   const reducedMotion = useReducedMotion();
-  const [phase, setPhase] = useState<'idle' | 'breaking' | 'broken' | 'fixing'>('idle');
+  const pr = useStore($prState);
+  const [phase, setPhase] = useState<Phase>('idle');
   const [toast, setToast] = useState<Toast | null>(null);
   const [toastVisible, setToastVisible] = useState(false);
+  const [progress, setProgress] = useState<Progress | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  const notify = (title: string, body?: string, tone: Toast['tone'] = 'info') => {
+  const notify = (title: string, body?: string, tone: Toast['tone'] = 'info', holdMs = 5200) => {
     setToast({ title, body, tone });
     setToastVisible(true);
     clearTimeout(toastTimer.current);
-    toastTimer.current = setTimeout(() => setToastVisible(false), 5200);
+    toastTimer.current = setTimeout(() => {
+      setToastVisible(false);
+      setProgress(null);
+    }, holdMs);
   };
 
-  // Reflect the overall state on <html> so static content (the hero headline) can react in CSS.
-  const anyBroken = FIX_IDS.some((id) => statuses[id] === 'broken' || statuses[id] === 'breaking');
+  const step = (id: FixId, state: StepState) =>
+    setProgress((p) => (p ? { ...p, steps: { ...p.steps, [id]: state } } : p));
+
+  const anyBroken = FIX_IDS.some((id) => isBroken(statuses[id]));
+
+  // Mirror the run on <html> so static content can react in CSS: the brand dot follows the whole site,
+  // and each hero word breaks and heals with the fixes behind it.
+  const siteState = phase === 'idle' ? (anyBroken ? 'broken' : 'healthy') : phase;
+  const wordStates = Object.entries(HERO_WORDS).map(
+    ([word, ids]) => [word, ids.some((id) => isBroken(statuses[id])) ? 'broken' : 'healed'] as const,
+  );
+  const wordKey = wordStates.map(([w, s]) => `${w}:${s}`).join(',');
+
   useEffect(() => {
-    document.documentElement.dataset.site = anyBroken ? 'broken' : 'healthy';
-  }, [anyBroken]);
+    document.documentElement.dataset.site = siteState;
+  }, [siteState]);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    for (const [word, state] of wordStates) {
+      // "healed" only after a break, so the healing animation never plays on first load.
+      if (state === 'broken' || root.dataset[word]) root.dataset[word] = state;
+    }
+    // wordStates is derived from wordKey.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wordKey]);
 
   const breakAll = async () => {
     setPhase('breaking');
     startSession();
     clearRequestLog();
     $prState.set('open');
-    notify('⚠ Breaking the site.', 'The graph will freeze the page for about 1.5 s on purpose.', 'warn');
+    setProgress({ mode: 'break', order: BREAK_ORDER, steps: {} });
+    notify('⚠ Breaking the site.', 'The graph will freeze the page for a second or two, on purpose.', 'warn');
     for (const id of BREAK_ORDER) {
       if (id === 'plot') continue;
-      requestTarget(id, 'broken');
+      requestTarget(id, 'broken', { quick: true });
+      step(id, 'done');
       await sleep(STAGGER_MS);
     }
-    await sleep(500);
-    requestTarget('plot', 'broken');
+    await sleep(400);
+    step('plot', 'active');
+    requestTarget('plot', 'broken', { quick: true });
     await Promise.all(BREAK_ORDER.map((id) => waitForStatus(id, 'broken')));
+    step('plot', 'done');
     setPhase('broken');
-    notify('Site broken.', 'Every card is measured. Press “Let Subham fix it”.', 'warn');
+    notify(
+      'Site broken. Six issues, all measured.',
+      'Scroll to see the damage, or press “Let Subham fix it”.',
+      'warn',
+    );
   };
 
   const fixAll = async () => {
@@ -71,22 +117,35 @@ export default function BreakFixControls() {
     startSession();
     clearRequestLog();
     $prState.set('open');
+    setProgress({ mode: 'fix', order: FIX_ORDER, steps: {} });
     for (const [index, id] of FIX_ORDER.entries()) {
-      const step = `${index + 1}/${FIX_ORDER.length}`;
-      notify(`Fixing ${step}`, FIX_META[id].commit, 'warn');
-      requestTarget(id, 'fixed');
+      const count = `${index + 1}/${FIX_ORDER.length}`;
+      step(id, 'active');
+      notify(`Commit ${count}`, FIX_META[id].commit, 'warn');
+      requestTarget(id, 'fixed', { quick: true });
       await waitForStatus(id, 'fixed');
-      notify(`✓ ${step}`, FIX_META[id].commit);
+      step(id, 'done');
+      notify(`✓ Commit ${count}`, FIX_META[id].commit);
       await sleep(BETWEEN_FIXES_MS);
     }
     $prState.set('merged');
+    setPhase('fixed');
+    notify('PR #581 merged.', 'Every number on this page was measured on your device.', 'info', 6000);
+    await sleep(MERGED_GLOW_MS);
     setPhase('idle');
-    notify('PR #581 merged.', 'Every number above was measured on your device.');
   };
 
   const running = phase === 'breaking' || phase === 'fixing';
   const breakDisabled = !ready || reducedMotion || running;
   const fixDisabled = !ready || running || !anyBroken;
+
+  const next = !ready ? (
+    <span>Loading the demos…</span>
+  ) : phase === 'broken' ? (
+    <a href="#fixes">See what broke ↓</a>
+  ) : pr === 'merged' && !anyBroken ? (
+    <a href="#results">See your results ↓</a>
+  ) : null;
 
   return (
     <>
@@ -102,7 +161,10 @@ export default function BreakFixControls() {
         <button type="button" className="btn btn--fix" disabled={fixDisabled} onClick={() => void fixAll()}>
           {phase === 'fixing' ? 'Fixing…' : 'Let Subham fix it'}
         </button>
-        {!ready && <span className="controls__note">Loading the demos…</span>}
+        {/* Always rendered with a reserved height, so its message can change without shifting the page. */}
+        <p className="controls__next" data-testid="controls-next">
+          {next}
+        </p>
         {reducedMotion && (
           <span className="controls__note">
             Breaking is turned off because you prefer reduced motion. Each fix and its explanation is still
@@ -118,6 +180,13 @@ export default function BreakFixControls() {
             <>
               <strong>{toast.title}</strong> {toast.body}
             </>
+          )}
+          {progress && (
+            <ol className={`toast__steps toast__steps--${progress.mode}`} aria-hidden="true">
+              {progress.order.map((id) => (
+                <li key={id} data-state={progress.steps[id] ?? 'pending'} title={FIX_META[id].label} />
+              ))}
+            </ol>
           )}
         </div>
       </div>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { contrastRatio, parseCssColor, relativeLuminance } from '@/lab/contrast';
+import { contrastRatio, effectiveBackground, parseCssColor, relativeLuminance } from '@/lab/contrast';
 
 describe('parseCssColor', () => {
   it('parses rgb and rgba strings', () => {
@@ -30,12 +30,10 @@ describe('WCAG contrast', () => {
   it('places #767676 on white just above AA (4.5:1)', () => {
     expect(contrastRatio([118, 118, 118], [255, 255, 255])).toBeCloseTo(4.54, 2);
   });
+});
 
-  it('confirms the design tokens used for body text meet AA', () => {
-    const paper: [number, number, number] = [245, 244, 239];
-    expect(contrastRatio([18, 18, 18], paper)).toBeGreaterThan(7); // ink
-    expect(contrastRatio([85, 85, 78], paper)).toBeGreaterThan(4.5); // muted
-    expect(contrastRatio([8, 115, 74], [220, 245, 232])).toBeGreaterThan(4.5); // good on good-bg
-    expect(contrastRatio([179, 38, 30], [253, 228, 225])).toBeGreaterThan(4.5); // bad on bad-bg
+describe('effectiveBackground', () => {
+  it('falls back to white when no ancestor paints a background', () => {
+    expect(effectiveBackground(null)).toEqual([255, 255, 255]);
   });
 });

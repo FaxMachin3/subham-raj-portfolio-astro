@@ -6,7 +6,7 @@ const studies = (await getCollection('work')).sort((a, b) => a.data.order - b.da
 ---
 
 <section class="section wrap" id="work" aria-labelledby="work-title">
-  <div class="section-head">
+  <div class="section-head" data-reveal>
     <h2 id="work-title">Case studies</h2>
     <p>The context, constraints and trade-offs behind the demos.</p>
   </div>
@@ -14,12 +14,12 @@ const studies = (await getCollection('work')).sort((a, b) => a.data.order - b.da
     {studies.map((study) => {
       const headline = study.data.metrics[0] ? requireMetric(study.data.metrics[0]) : undefined;
       return (
-        <li>
+        <li data-reveal>
           <a class="study card" href={`/work/${study.id}`}>
             <span class="study__meta mono">
               {study.data.company} · {study.data.role}
             </span>
-            <h3>{study.data.title}</h3>
+            <h3 style={`view-transition-name: study-${study.id}`}>{study.data.title}</h3>
             <p>{study.data.summary}</p>
             {headline && (
               <span class="study__metric">

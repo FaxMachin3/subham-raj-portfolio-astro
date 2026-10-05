@@ -40,3 +40,15 @@ describe('ResultsTable', () => {
     expect(screen.getByTestId('pr-badge').textContent).toBe('Merged');
   });
 });
+
+describe('ResultsTable n/a', () => {
+  it('says n/a where this browser could not measure', () => {
+    $results.setKey('jank', {
+      before: { value: 0, unit: 'frames', display: '0 frames', detail: '', supported: false },
+    });
+    render(<ResultsTable production={production} />);
+    const row = screen.getByRole('row', { name: /Sidebar animation/ });
+    expect(within(row).getByText('n/a')).toBeTruthy();
+    $results.setKey('jank', {});
+  });
+});

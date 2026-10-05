@@ -3,7 +3,7 @@ import type { GetStaticPaths } from 'astro';
 import { getCollection, render } from 'astro:content';
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import { requireMetric, unbreakable } from '@/lib/metrics';
-import { site } from '@/data/site';
+import { articleGraph } from '@/lib/seo';
 
 export const getStaticPaths = (async () => {
   const studies = (await getCollection('work')).sort((a, b) => a.data.order - b.data.order);
@@ -17,20 +17,27 @@ const { study, next } = Astro.props;
 const { Content } = await render(study);
 const headlines = study.data.metrics.map((id) => requireMetric(id));
 
-const article = {
-  '@context': 'https://schema.org',
-  '@type': 'Article',
-  headline: study.data.title,
+const path = `/work/${study.id}`;
+const graph = articleGraph({
+  path,
+  title: study.data.title,
   description: study.data.summary,
-  author: { '@type': 'Person', name: site.name, url: site.url },
-};
+  published: study.data.published,
+  updated: study.data.updated,
+  keywords: study.data.stack,
+  section: 'Case studies',
+  image: `/og/work-${study.id}.png`,
+});
 ---
 
 <BaseLayout
   title={study.data.title}
   description={study.data.summary}
-  structuredData={article}
+  graph={graph}
   ogType="article"
+  ogImage={`work-${study.id}`}
+  published={study.data.published}
+  updated={study.data.updated}
 >
   <article class="study wrap">
     <a class="study__back" href="/#work">
@@ -40,7 +47,7 @@ const article = {
       <p class="eyebrow">
         {study.data.company} · {study.data.period}
       </p>
-      <h1>{study.data.title}</h1>
+      <h1 style={`view-transition-name: study-${study.id}`}>{study.data.title}</h1>
       <p class="study__summary">{study.data.summary}</p>
       <dl class="study__facts">
         <div>
@@ -127,24 +134,6 @@ const article = {
     font-family: var(--font-mono);
     color: var(--color-good);
     font-size: 1.1rem !important;
-  }
-
-  .prose :global(h2) {
-    margin: var(--space-8) 0 var(--space-3);
-    font-size: 1.5rem;
-  }
-
-  .prose :global(p),
-  .prose :global(li) {
-    font-size: 1.02rem;
-    line-height: 1.75;
-  }
-
-  .prose :global(code) {
-    padding: 0.1em 0.35em;
-    border-radius: 5px;
-    background: var(--color-sunken);
-    font-size: 0.9em;
   }
 
   .study__next {

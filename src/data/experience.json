@@ -8,7 +8,7 @@
     "end": "2026",
     "summary": "TRM Forensics, a graph-based blockchain investigation product used by government agencies and financial institutions.",
     "highlights": [
-      "Led a 20+ PR performance push on the KeyLines investigation graph: plot matching on 1,600 elements went from 15.5 s to 14 ms.",
+      "Removed quadratic hot paths in the investigation graph across two renderers (ReGraph, then KeyLines); led a 20+ PR push in which memoized index lookups took plot matching on 1,600 elements from 15.5 s to 14 ms.",
       "Built the chat UI for Co-Case Agent (now Orion), TRM’s AI investigation assistant, launched March 2026.",
       "Proposed and built a Radix UI + Tailwind design system; all new UI is built on it. Keyboard-navigable data tables for a government contract.",
       "Introduced route-level code splitting (~85% smaller initial bundle), led frontend i18n with typed keys and CI checks, and built an OpenAPI-typed API client.",

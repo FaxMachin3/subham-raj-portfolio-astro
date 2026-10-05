@@ -1,31 +1,32 @@
 ---
 import { site } from '@/data/site';
+import ThemeSwitch from './ThemeSwitch.astro';
 
 const links = [
-  { href: '/#fixes', label: 'The fixes', desktopOnly: true },
-  { href: '/#work', label: 'Work', desktopOnly: false },
-  { href: '/#experience', label: 'Experience', desktopOnly: true },
-  { href: '/resume', label: 'Résumé', desktopOnly: false },
+  { href: '/#fixes', label: 'The fixes', desktopOnly: true, hideOnTiny: true },
+  { href: '/#work', label: 'Work', desktopOnly: false, hideOnTiny: true },
+  { href: '/#experience', label: 'Experience', desktopOnly: true, hideOnTiny: true },
+  { href: '/resume', label: 'Résumé', desktopOnly: false, hideOnTiny: false },
 ];
 ---
 
 <header class="site-header">
   <div class="wrap site-header__inner">
     <a class="brand" href="/" aria-label={`${site.name}, home`}>
-      <span class="brand__mark" aria-hidden="true">
-        ✓
+      <span class="brand__word" aria-hidden="true">
+        subham<span class="brand__dot"></span>raj
       </span>
-      {site.name}
     </a>
     <nav aria-label="Main">
       <ul>
         {links.map((link) => (
-          <li class:list={{ 'desktop-only': link.desktopOnly }}>
+          <li class:list={{ 'desktop-only': link.desktopOnly, 'hide-tiny': link.hideOnTiny }}>
             <a href={link.href}>{link.label}</a>
           </li>
         ))}
       </ul>
     </nav>
+    <ThemeSwitch />
   </div>
 </header>
 
@@ -34,7 +35,7 @@ const links = [
     position: sticky;
     top: 0;
     z-index: 40;
-    background: rgb(245 244 239 / 0.9);
+    background: var(--color-header-bg);
     backdrop-filter: blur(8px);
     border-bottom: 1px solid var(--color-line);
   }
@@ -42,7 +43,6 @@ const links = [
   .site-header__inner {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     height: var(--header-height);
     gap: var(--space-4);
   }
@@ -50,22 +50,66 @@ const links = [
   .brand {
     display: flex;
     align-items: center;
-    gap: var(--space-2);
-    font-weight: 600;
+    min-height: 44px;
     text-decoration: none;
     white-space: nowrap;
-    min-height: 44px;
   }
 
-  .brand__mark {
-    display: grid;
-    place-items: center;
-    width: 28px;
-    height: 28px;
-    border-radius: 8px;
-    background: var(--color-ink);
-    color: #34d399;
-    font-size: 0.9rem;
+  .brand__word {
+    display: inline-flex;
+    align-items: baseline;
+    font-size: 1.22rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    view-transition-name: brand;
+  }
+
+  /* The dot is a status light that mirrors the site: healthy, broken, fixing, fixed. */
+  .brand__dot {
+    width: 0.34em;
+    height: 0.34em;
+    margin: 0 0.1em;
+    border-radius: 50%;
+    background: var(--color-status-ok);
+    transform: translateY(-0.04em);
+    transition: background-color 0.3s;
+  }
+
+  :global(html[data-site='broken']) .brand__dot {
+    background: var(--color-status-bad);
+    animation: dot-alarm 0.7s ease-in-out infinite;
+  }
+
+  :global(html[data-site='fixing']) .brand__dot {
+    background: var(--color-status-busy);
+    animation: dot-work 0.9s ease-in-out infinite;
+  }
+
+  :global(html[data-site='fixed']) .brand__dot {
+    animation: dot-pop 0.6s var(--ease-spring);
+  }
+
+  @keyframes dot-alarm {
+    50% {
+      opacity: 0.3;
+      transform: translateY(-0.04em) scale(0.8);
+    }
+  }
+
+  @keyframes dot-work {
+    50% {
+      transform: translateY(-0.04em) scale(1.35);
+    }
+  }
+
+  @keyframes dot-pop {
+    from {
+      transform: translateY(-0.04em) scale(2.4);
+    }
+  }
+
+  nav {
+    margin-left: auto;
   }
 
   nav ul {
@@ -89,7 +133,7 @@ const links = [
 
   nav a:hover {
     color: var(--color-ink);
-    background: rgb(0 0 0 / 0.05);
+    background: var(--color-hover);
   }
 
   @media (max-width: 720px) {
@@ -99,6 +143,23 @@ const links = [
 
     nav a {
       padding: 0 var(--space-2);
+    }
+  }
+
+  @media (max-width: 480px) {
+    .site-header__inner {
+      gap: var(--space-2);
+    }
+  }
+
+  /* Smallest phones: the Work section is one scroll away, and the theme switch needs the room. */
+  @media (max-width: 400px) {
+    .hide-tiny {
+      display: none;
+    }
+
+    .brand__word {
+      font-size: 1.1rem;
     }
   }
 </style>

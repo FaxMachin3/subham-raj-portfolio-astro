@@ -35,12 +35,9 @@ export default function NetworkFix({ productionNote }: { productionNote: string 
   const shiftRef = useRef(0);
   const visibleRef = useRef(false);
   const pollTimes = useRef<number[]>([]);
-  const fetchedRef = useRef(new Set<number>());
   const runRef = useRef(0);
 
   const loadEntity = useCallback(async (id: number, run: number) => {
-    if (fetchedRef.current.has(id)) return;
-    fetchedRef.current.add(id);
     const response = await trackedFetch(`/data/entities/${id}.json`);
     const data = (await response.json()) as Required<Entity>;
     if (run === runRef.current) setEntities((prev) => prev.map((e) => (e.id === id ? data : e)));
@@ -48,20 +45,18 @@ export default function NetworkFix({ productionNote }: { productionNote: string 
 
   // Track whether the card is on screen: the late banner only appears while it is, so the shift is visible.
   useEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
-    const observer = new IntersectionObserver(([entry]) => (visibleRef.current = !!entry?.isIntersecting), {
+    const observer = new IntersectionObserver(([entry]) => (visibleRef.current = entry!.isIntersecting), {
       threshold: 0.3,
     });
-    observer.observe(root);
+    observer.observe(rootRef.current!);
     return () => observer.disconnect();
   }, []);
 
   // The panel observer below uses the list as its root, which ignores the page viewport, so hold it back
   // until the card is near the screen. Otherwise the healthy page fetches panels nobody can see.
   useEffect(() => {
-    const root = rootRef.current;
-    if (!root || activated) return;
+    if (activated) return;
+    const root = rootRef.current!;
     const observer = new IntersectionObserver(([entry]) => entry?.isIntersecting && setActivated(true), {
       rootMargin: '200px',
     });
@@ -73,8 +68,7 @@ export default function NetworkFix({ productionNote }: { productionNote: string 
   useEffect(
     () =>
       observeLayoutShifts((value, nodes) => {
-        const root = rootRef.current;
-        if (root && nodes.some((n) => root.contains(n))) shiftRef.current += value;
+        if (nodes.some((n) => rootRef.current!.contains(n))) shiftRef.current += value;
       }),
     [],
   );
@@ -92,8 +86,7 @@ export default function NetworkFix({ productionNote }: { productionNote: string 
   // Fixed mode: fetch a panel only when it scrolls into the list's viewport.
   useEffect(() => {
     if (mode !== 'fixed' || !activated) return;
-    const list = listRef.current;
-    if (!list) return;
+    const list = listRef.current!;
     const run = runRef.current;
     const observer = new IntersectionObserver(
       (entries) =>
@@ -131,12 +124,11 @@ export default function NetworkFix({ productionNote }: { productionNote: string 
     runRef.current += 1;
     setRunId(runRef.current);
     setActivated(true);
-    fetchedRef.current = new Set();
     shiftRef.current = 0;
     setBanner('hidden');
     setEntities(emptyEntities());
     setMode(next);
-    listRef.current?.scrollTo({ top: 0 });
+    listRef.current!.scrollTo({ top: 0 });
   };
 
   const run = async (next: Mode, signal: AbortSignal): Promise<Measurement> => {
@@ -204,6 +196,8 @@ export default function NetworkFix({ productionNote }: { productionNote: string 
             </li>
           ))}
         </ul>
+        {/* Holds the banner's height while it is missing, so the shove happens inside the demo, not to the page. */}
+        {mode === 'broken' && banner === 'hidden' && <div className="late-spacer" aria-hidden="true" />}
         <div className="network-stats">
           <span>
             <span className={`pulse-dot${pollRate > 2 ? ' pulse-dot--hot' : ''}`} aria-hidden="true" />

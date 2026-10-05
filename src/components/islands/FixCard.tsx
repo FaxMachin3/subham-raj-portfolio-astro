@@ -1,9 +1,13 @@
-import type { ReactNode } from 'react';
+import { lazy, Suspense, type ReactNode } from 'react';
 import { useStore } from '@nanostores/react';
+import { $xray } from '@/xray/store';
 import { $results, $statuses, requestTarget } from '@/stores/fixes';
 import { FIX_META } from '@/fixes/registry';
 import type { FixId, FixStatus, Measurement } from '@/fixes/types';
 import { useReducedMotion } from '@/lib/useReducedMotion';
+
+// Loaded on the first break or fix, so the x-rays add nothing to the initial page.
+const XRay = lazy(() => import('./XRay'));
 
 const STATUS_LABEL: Record<FixStatus, string> = {
   healthy: 'Healthy',
@@ -64,6 +68,7 @@ export default function FixCard({
 }: FixCardProps) {
   const status = useStore($statuses, { keys: [id] })[id];
   const result = useStore($results, { keys: [id] })[id];
+  const xray = useStore($xray, { keys: [id] })[id];
   const reducedMotion = useReducedMotion();
   const busy = status === 'breaking' || status === 'fixing';
   const breakBlocked = reducedMotion && FIX_META[id].motion;
@@ -88,6 +93,11 @@ export default function FixCard({
       <p className="fix-card__desc">{description}</p>
       <div className="fix-card__demo" data-demo-region>
         {children}
+        {xray && (
+          <Suspense fallback={null}>
+            <XRay key={xray.nonce} id={id} request={xray} />
+          </Suspense>
+        )}
       </div>
       <div className="metrics">
         <MetricBox phase="before" label={measureLabel.before} measurement={result.before} />
@@ -112,7 +122,8 @@ export default function FixCard({
         >
           Fix
         </button>
-        {footnote && <span className="fix-card__note">{footnote}</span>}
+        {/* Rendered even while empty: its space is reserved, so the first result doesn't push the page down. */}
+        {footnote !== undefined && <span className="fix-card__note">{footnote}</span>}
       </div>
       {productionNote && <p className="fix-card__prod">{productionNote}</p>}
     </article>

@@ -17,6 +17,8 @@ const work = defineCollection({
     /** Headline numbers; must exist in src/data/metrics.ts and are checked for approval at render time. */
     metrics: z.array(z.enum(metricIds)).default([]),
     order: z.number().int(),
+    published: z.coerce.date(),
+    updated: z.coerce.date(),
   }),
 });
 
@@ -34,4 +36,19 @@ const experience = defineCollection({
   }),
 });
 
-export const collections = { work, experience };
+/** Technical write-ups. `draft: true` posts render in `npm run dev` only and never reach a build. */
+const writing = defineCollection({
+  loader: glob({ base: './src/content/writing', pattern: '**/*.mdx' }),
+  schema: z.object({
+    title: z.string().max(90),
+    description: z.string().min(80).max(200),
+    published: z.coerce.date(),
+    updated: z.coerce.date(),
+    tags: z.array(z.string()).min(1),
+    draft: z.boolean().default(true),
+    /** Case study or demo this post expands on. */
+    related: z.string().optional(),
+  }),
+});
+
+export const collections = { work, experience, writing };

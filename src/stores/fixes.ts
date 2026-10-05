@@ -14,6 +14,8 @@ const byFix = <T>(value: T) => Object.fromEntries(FIX_IDS.map((id) => [id, value
 export interface TargetRequest {
   target: FixTarget;
   nonce: number;
+  /** Part of a whole-site run: the x-ray plays its short version. */
+  quick: boolean;
 }
 
 export const $targets = map<Record<FixId, TargetRequest | null>>(byFix(null));
@@ -29,10 +31,10 @@ export const $prState = atom<'none' | 'open' | 'merged'>('none');
 
 let nonce = 0;
 
-export function requestTarget(id: FixId, target: FixTarget): void {
+export function requestTarget(id: FixId, target: FixTarget, { quick = false } = {}): void {
   // Set the in-progress status synchronously so waitForStatus() can never resolve on a stale state.
   $statuses.setKey(id, target === 'broken' ? 'breaking' : 'fixing');
-  $targets.setKey(id, { target, nonce: ++nonce });
+  $targets.setKey(id, { target, nonce: ++nonce, quick });
 }
 
 export function recordMeasurement(id: FixId, phase: keyof FixResult, measurement: Measurement): void {

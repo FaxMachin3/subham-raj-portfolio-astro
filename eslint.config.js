@@ -5,7 +5,18 @@ import reactHooks from 'eslint-plugin-react-hooks';
 import globals from 'globals';
 
 export default defineConfig(
-  { ignores: ['dist/', '.astro/', 'node_modules/', 'playwright-report/', 'test-results/', 'src/demos/'] },
+  {
+    ignores: [
+      'dist/',
+      '.astro/',
+      'node_modules/',
+      'playwright-report/',
+      'test-results/',
+      'src/demos/',
+      'coverage/',
+      'walkthrough-results/',
+    ],
+  },
   ...tseslint.configs.recommended,
   ...astro.configs.recommended,
   {

@@ -4,38 +4,21 @@ import Hero from '@/components/sections/Hero.astro';
 import FixesSection from '@/components/sections/FixesSection.astro';
 import ResultsSection from '@/components/sections/ResultsSection.astro';
 import WorkSection from '@/components/sections/WorkSection.astro';
+import WritingSection from '@/components/sections/WritingSection.astro';
 import LeverageSection from '@/components/sections/LeverageSection.astro';
 import ExperienceSection from '@/components/sections/ExperienceSection.astro';
 import ContactSection from '@/components/sections/ContactSection.astro';
 import HealthBar from '@/components/islands/HealthBar';
-import { site } from '@/data/site';
+import { profilePageGraph } from '@/lib/seo';
 import '@/styles/islands.css';
-
-const person = {
-  '@context': 'https://schema.org',
-  '@type': 'Person',
-  name: site.name,
-  jobTitle: site.role,
-  url: site.url,
-  email: `mailto:${site.email}`,
-  address: { '@type': 'PostalAddress', addressLocality: 'Bengaluru', addressCountry: 'IN' },
-  sameAs: [site.links.linkedin, site.links.github],
-  knowsAbout: [
-    'React',
-    'TypeScript',
-    'Web performance',
-    'Accessibility',
-    'Design systems',
-    'Internationalization',
-  ],
-};
 ---
 
-<BaseLayout structuredData={person} ogType="profile">
+<BaseLayout graph={profilePageGraph()} ogType="profile">
   <Hero />
   <FixesSection />
   <ResultsSection />
   <WorkSection />
+  <WritingSection />
   <LeverageSection />
   <ExperienceSection />
   <ContactSection />

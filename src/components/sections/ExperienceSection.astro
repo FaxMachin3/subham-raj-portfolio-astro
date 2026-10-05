@@ -6,12 +6,12 @@ const roles = (await getCollection('experience')).sort((a, b) => b.data.start.lo
 ---
 
 <section class="section wrap" id="experience" aria-labelledby="experience-title">
-  <div class="section-head">
+  <div class="section-head" data-reveal>
     <h2 id="experience-title">Where I’ve been fixing things</h2>
   </div>
   <ol class="roles">
     {roles.map(({ data }) => (
-      <li class="card">
+      <li class="card" data-reveal>
         <span class="roles__when mono">{formatPeriod(data.start, data.end)}</span>
         <h3>{data.company}</h3>
         <p class="roles__role">{data.role}</p>

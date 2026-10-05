@@ -12,16 +12,17 @@ export interface AuditReport {
 }
 
 const hasAccessibleName = (el: Element) =>
-  /[\p{L}\p{N}]/u.test(el.getAttribute('aria-label') ?? '') || /[\p{L}\p{N}]/u.test(el.textContent ?? '');
+  /[\p{L}\p{N}]/u.test(`${el.getAttribute('aria-label') ?? ''} ${el.textContent}`);
 
 /**
  * Audits a demo region the way a keyboard and screen-reader user experiences it. A table with a
- * roving tabindex (one cell at tabindex=0) is one Tab stop whose arrow keys reach every cell.
+ * roving tabindex (one header or cell at tabindex=0) is one Tab stop whose keys reach every cell.
  */
 export function auditRegion(root: HTMLElement): AuditReport {
   const interactive = [...root.querySelectorAll<HTMLElement>('[data-interactive]')];
-  const cells = interactive.filter((el) => el.tagName === 'TD');
-  const controls = interactive.filter((el) => el.tagName !== 'TD');
+  const isTablePart = (el: HTMLElement) => el.tagName === 'TD' || el.tagName === 'TH';
+  const cells = interactive.filter(isTablePart);
+  const controls = interactive.filter((el) => !isTablePart(el));
   const tableIsRoving = cells.some((el) => el.tabIndex === 0);
   const reachable = controls.filter((el) => el.tabIndex >= 0).length + (tableIsRoving ? cells.length : 0);
 

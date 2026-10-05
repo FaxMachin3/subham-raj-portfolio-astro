@@ -30,9 +30,17 @@ export async function expectNoHorizontalOverflow(page: Page): Promise<void> {
   expect(scrollWidth, 'page should not scroll sideways').toBeLessThanOrEqual(deviceWidth);
 }
 
-/** Starts recording unexpected layout shifts (Chromium only; other engines return null). */
-export async function recordLayoutShift(page: Page): Promise<() => Promise<number | null>> {
-  const supported = await page.evaluate(() => {
+/**
+ * Starts recording unexpected layout shifts (Chromium only; other engines return null). With
+ * `outsideDemos`, shifts that happen entirely inside a demo region are ignored: some demos move content on
+ * purpose (the network demo's late banner, the jank demo's resizing graph), and what matters is that the
+ * page around them never moves.
+ */
+export async function recordLayoutShift(
+  page: Page,
+  { outsideDemos = false } = {},
+): Promise<() => Promise<number | null>> {
+  const supported = await page.evaluate((outside) => {
     if (!PerformanceObserver.supportedEntryTypes?.includes('layout-shift')) return false;
     const w = window as unknown as { __shift: number };
     w.__shift = 0;
@@ -40,12 +48,17 @@ export async function recordLayoutShift(page: Page): Promise<() => Promise<numbe
       for (const e of list.getEntries() as (PerformanceEntry & {
         value: number;
         hadRecentInput: boolean;
+        sources?: { node?: Node | null }[];
       })[]) {
-        if (!e.hadRecentInput) w.__shift += e.value;
+        if (e.hadRecentInput) continue;
+        const inDemo = (n?: Node | null) =>
+          (n instanceof Element ? n : n?.parentElement)?.closest('[data-demo-region]');
+        if (outside && e.sources?.length && e.sources.every((s) => inDemo(s.node))) continue;
+        w.__shift += e.value;
       }
     }).observe({ type: 'layout-shift' });
     return true;
-  });
+  }, outsideDemos);
   return async () =>
     supported ? page.evaluate(() => (window as unknown as { __shift: number }).__shift) : null;
 }
