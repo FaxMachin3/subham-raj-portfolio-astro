@@ -4,9 +4,10 @@
 // by design and excluded.
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
 
-const DIST = new URL('../dist/', import.meta.url).pathname;
+const DIST = fileURLToPath(new URL('../dist/', import.meta.url));
 const BUDGET_KB = { js: 90, css: 10 };
 
 const html = await readFile(join(DIST, 'index.html'), 'utf8');

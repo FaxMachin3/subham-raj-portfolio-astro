@@ -19,9 +19,10 @@ export default function CountUp({ text }: { text: string }) {
     const target = Number(match[1]);
     const decimals = match[2]?.length ?? 0;
     const suffix = match[3]!;
-    const start = performance.now();
+    let start: number | undefined;
     let frame = 0;
     const tick = (now: number) => {
+      start ??= now;
       const t = Math.min(1, (now - start) / DURATION_MS);
       const eased = 1 - (1 - t) ** 3;
       node.nodeValue = `${(target * eased).toFixed(decimals)}${suffix}`;

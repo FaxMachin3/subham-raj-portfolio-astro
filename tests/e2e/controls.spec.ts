@@ -78,7 +78,7 @@ test.describe('Fix 05 controls', () => {
       await tap(isMobile)(more);
       await tap(isMobile)(region.getByRole('menuitem', { name: 'Copy addresses' }));
       await expect(region.getByRole('status')).toHaveText('Copied 4 addresses.');
-      expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+      expect((await page.evaluate(() => navigator.clipboard.readText())).replace(/\r\n/g, '\n')).toBe(
         '0x9f…a21\n0x3c…7e0\n0x71…b4d\n0xa4…19c',
       );
     }

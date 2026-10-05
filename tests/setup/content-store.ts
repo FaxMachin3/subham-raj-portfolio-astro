@@ -7,7 +7,7 @@ import { copyFileSync, mkdirSync } from 'node:fs';
  * collections. Runs in a child process because Astro's sync forces NODE_ENV=production.
  */
 export default function globalSetup() {
-  execFileSync('npx', ['astro', 'sync'], { stdio: 'ignore' });
+  execFileSync(process.execPath, ['node_modules/astro/bin/astro.mjs', 'sync'], { stdio: 'ignore' });
   mkdirSync('.astro', { recursive: true });
   copyFileSync('node_modules/.astro/data-store.json', '.astro/data-store.json');
 }
