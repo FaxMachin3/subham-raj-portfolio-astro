@@ -1,0 +1,46 @@
+/*
+ * The five web fonts are inlined into this (render-blocking, immutably cached) stylesheet as data URIs; see
+ * `assetsInlineLimit` in astro.config.mjs. Linked font files, even preloaded and cached, arrive after
+ * WebKit's first paint of every navigation, so iPhones showed either a font swap (`swap`) or a blank frame
+ * of invisible text (`optional`/`block`). Inlined, the fonts are ready for the first frame.
+ * Sources: src/assets/fonts/README.md.
+ */
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../assets/fonts/poppins-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('../assets/fonts/poppins-600.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url('../assets/fonts/poppins-800.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../assets/fonts/jetbrains-mono-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('../assets/fonts/jetbrains-mono-500.woff2') format('woff2');
+}

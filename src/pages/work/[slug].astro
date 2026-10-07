@@ -40,14 +40,16 @@ const graph = articleGraph({
   updated={study.data.updated}
 >
   <article class="study wrap">
-    <a class="study__back" href="/#work">
+    <a class="study__back" href="/#work" data-back-link>
       ← All case studies
     </a>
     <header class="study__head">
       <p class="eyebrow">
         {study.data.company} · {study.data.period}
       </p>
-      <h1 style={`view-transition-name: study-${study.id}`}>{study.data.title}</h1>
+      <h1 style={`view-transition-name: study-${study.id}; view-transition-class: study-title`}>
+        {study.data.title}
+      </h1>
       <p class="study__summary">{study.data.summary}</p>
       <dl class="study__facts">
         <div>
@@ -77,6 +79,13 @@ const graph = articleGraph({
     )}
   </article>
 </BaseLayout>
+
+<script>
+  import { enableBackLink, markOpenedFromHome } from '@/lib/back-link';
+
+  markOpenedFromHome();
+  enableBackLink(document.querySelector<HTMLAnchorElement>('[data-back-link]')!);
+</script>
 
 <style>
   .study {

@@ -88,14 +88,45 @@ html[data-theme='dark'] {
   color-scheme: dark;
 }
 
-/* Metric-matched to the web fonts so the swap does not shift layout. */
+/*
+ * Metric-matched to the web fonts so the swap does not shift layout. One face per weight band: bold text in
+ * a regular fallback is synthesised from Arial Regular and comes out ~10% narrower than Poppins, which
+ * re-wraps headings and moves everything below them when Poppins arrives (WebKit has no scroll anchoring to
+ * hide that). Widths are matched on this site's own copy; vertical metrics are Poppins' divided by
+ * size-adjust.
+ */
 @font-face {
   font-family: 'Poppins Fallback';
   src: local('Arial'), local('Liberation Sans'), local('Helvetica');
-  size-adjust: 104.85%;
-  ascent-override: 100.14%;
-  descent-override: 33.38%;
-  line-gap-override: 9.54%;
+  font-weight: 100 500;
+  size-adjust: 112.8%;
+  ascent-override: 93.09%;
+  descent-override: 31.03%;
+  line-gap-override: 8.87%;
+}
+
+@font-face {
+  font-family: 'Poppins Fallback';
+  src:
+    local('Arial Bold'), local('Arial-BoldMT'), local('Liberation Sans Bold'), local('LiberationSans-Bold'),
+    local('Helvetica Bold'), local('Helvetica-Bold');
+  font-weight: 501 699;
+  size-adjust: 103%;
+  ascent-override: 101.94%;
+  descent-override: 33.98%;
+  line-gap-override: 9.71%;
+}
+
+@font-face {
+  font-family: 'Poppins Fallback';
+  src:
+    local('Arial Bold'), local('Arial-BoldMT'), local('Liberation Sans Bold'), local('LiberationSans-Bold'),
+    local('Helvetica Bold'), local('Helvetica-Bold');
+  font-weight: 700 900;
+  size-adjust: 107.6%;
+  ascent-override: 97.58%;
+  descent-override: 32.53%;
+  line-gap-override: 9.29%;
 }
 
 @font-face {

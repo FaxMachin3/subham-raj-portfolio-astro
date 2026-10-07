@@ -36,7 +36,7 @@ const graph = articleGraph({
   updated={post.data.updated}
 >
   <article class="post wrap">
-    <a class="post__back" href="/#writing">
+    <a class="post__back" href="/#writing" data-back-link>
       ← All writing
     </a>
     {post.data.draft && <p class="post__draft">Draft: visible in development only.</p>}
@@ -47,7 +47,9 @@ const graph = articleGraph({
         </time>
         · {post.data.tags.join(' · ')}
       </p>
-      <h1 style={`view-transition-name: post-${post.id}`}>{post.data.title}</h1>
+      <h1 style={`view-transition-name: post-${post.id}; view-transition-class: study-title`}>
+        {post.data.title}
+      </h1>
       <p class="post__summary">{post.data.description}</p>
     </header>
     <div class="prose">
@@ -60,6 +62,13 @@ const graph = articleGraph({
     )}
   </article>
 </BaseLayout>
+
+<script>
+  import { enableBackLink, markOpenedFromHome } from '@/lib/back-link';
+
+  markOpenedFromHome();
+  enableBackLink(document.querySelector<HTMLAnchorElement>('[data-back-link]')!);
+</script>
 
 <style>
   .post {

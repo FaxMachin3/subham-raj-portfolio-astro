@@ -7,11 +7,22 @@
 }
 
 html {
-  scroll-behavior: smooth;
+  background: var(--color-paper);
   scroll-padding-top: calc(var(--header-height) + var(--space-4));
   /* The live health bar is fixed to the bottom; keep focused elements clear of it (WCAG 2.4.11). */
   scroll-padding-bottom: calc(var(--hud-height) + var(--space-6));
   -webkit-text-size-adjust: 100%;
+}
+
+/*
+ * Smooth scrolling only for jumps within a loaded page. Applied from the first paint, it would also animate
+ * the jump to a fragment when a page opens (e.g. "All case studies" → /#work scrolling down from the top).
+ * BaseLayout adds the class after the load event.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  html.smooth-scroll {
+    scroll-behavior: smooth;
+  }
 }
 
 body {
@@ -241,6 +252,31 @@ p {
 }
 
 /*
+ * A card title (two small lines) and its page heading (three large lines) wrap differently, so the default
+ * crossfade of both snapshots, scaled over each other, reads as doubled, smeared text. The box still glides
+ * between the two; the old text fades out before the new one fades in, so they never overlap.
+ */
+::view-transition-old(.study-title) {
+  animation: vt-title-out 0.12s ease-in both;
+}
+
+::view-transition-new(.study-title) {
+  animation: vt-title-in 0.2s 0.12s ease-out both;
+}
+
+@keyframes vt-title-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes vt-title-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/*
  * Scroll-linked entrances. They animate `translate`/`scale` (not opacity, so contrast is never reduced,
  * and not `transform`, so hover transforms still compose). Browsers without scroll timelines show the
  * content as is.
@@ -276,10 +312,6 @@ p {
   ::view-transition-old(*),
   ::view-transition-new(*) {
     animation: none !important;
-  }
-
-  html {
-    scroll-behavior: auto;
   }
 
   *,

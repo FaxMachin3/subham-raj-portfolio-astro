@@ -19,7 +19,9 @@ const posts = await getPosts();
               {formatDate(post.data.published)}
               {post.data.draft && ' · draft'}
             </span>
-            <h3 style={`view-transition-name: post-${post.id}`}>{post.data.title}</h3>
+            <h3 style={`view-transition-name: post-${post.id}; view-transition-class: study-title`}>
+              {post.data.title}
+            </h3>
             <p>{post.data.description}</p>
           </a>
         </li>

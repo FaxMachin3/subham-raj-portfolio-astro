@@ -72,7 +72,7 @@ Why it is built this way is recorded in [docs/adr](docs/adr).
 | Format         | `npm run format:check` | Prettier, including `.astro` files.                                                                                  |
 | Unit/component | `npm run test`         | Vitest: lab core, stores, metrics guard, colour tokens, SEO helpers, components.                                     |
 | Build          | `npm run build`        | Static build; fails if an unapproved metric is required.                                                             |
-| Budget         | `npm run budget`       | Homepage JS ≤ 90 KB and CSS ≤ 10 KB gzip (static imports).                                                           |
+| Budget         | `npm run budget`       | Homepage JS ≤ 90 KB, CSS ≤ 10 KB and inlined web fonts ≤ 70 KB gzip (static imports).                                |
 | End to end     | `npm run test:e2e`     | Playwright on Chromium, WebKit and Firefox, 10 device profiles, axe WCAG 2.2 AA, no horizontal overflow, CLS checks. |
 
 Run `npx playwright install --with-deps` once before the end-to-end tests.
@@ -156,12 +156,15 @@ Animation explains what is happening; it never decorates. The break/fix run is c
 - **Per demo:** the fixed plot streams in while staying responsive (the broken one freezes, then appears at
   once); Fix 05's focus ring glides between rows, headers and cells; translations crossfade.
 - **Merged:** the PR badge pops, results rows cascade in and their numbers count up.
-- **Site-wide:** case-study cards morph into the page heading (cross-document view transitions), the theme
-  switch reveals the new theme in a circle from the control, and sections slide in on scroll
-  (`animation-timeline: view()`).
+- **Site-wide:** case-study cards morph into the page heading and back again (cross-document view
+  transitions; the old title fades out before the new one fades in, because the two wrap differently), the
+  theme switch reveals the new theme in a circle from the control, and sections slide in on scroll
+  (`animation-timeline: view()`). "← All case studies" goes back in history when the page was opened from the
+  homepage in this tab (`src/lib/back-link.ts`), so it returns to the exact scroll position like Back does.
+  Smooth scrolling only starts after `load`, so arriving at `/#work` never animates down from the top.
 
-Rules: only transform-type properties animate (no opacity on text, so contrast never dips; no layout
-properties, so nothing shifts); the LCP headline is never hidden; everything is CSS or the platform's view
+Rules: page content uses transform-type animations; title snapshots fade sequentially during page transitions
+to avoid overlapping text. Layout properties do not animate, so nothing shifts; the LCP headline is never hidden; everything is CSS or the platform's view
 transitions, with JavaScript only for the count-up, the plot stream and the x-ray timelines (loaded on first use,
 with their CSS, so they add nothing to the initial page); `prefers-reduced-motion` turns it all
 off. See [ADR 0005](docs/adr/0005-motion.md).
@@ -222,5 +225,10 @@ Update `site` in `astro.config.mjs` and `url` in `src/data/site.ts` if the domai
 - **`npm audit` reports two moderate advisories in `fflate`**, pulled in by satori, which renders social
   images at build time only. Nothing reaches the browser (`npm audit --omit=dev` is clean) and the affected
   function (unzipping malformed archives) is never called with outside input.
-- **Font fallbacks are metric-matched** (`size-adjust` and ascent/descent overrides in `tokens.css`) and the
-  two most visible Poppins weights are preloaded, so the font swap does not shift layout.
+- **Web fonts are inlined into the stylesheet** (`src/styles/fonts.css`, 65.6 KB gzip for the five font
+  payloads, cached with it). Tests reproduced linked fonts arriving after the first frame in WebKit:
+  `font-display: swap` can change visible text and `optional` can briefly make it invisible. Inlining and
+  starting font decoding before text layout remove separate font downloads; first-frame geometry is checked
+  by the navigation tests. Physical iPhone behavior still needs verification. Fallbacks in `tokens.css` are
+  matched per weight. A history-position fallback corrects rebuilt homepages after parsing if native
+  restoration is clamped to incomplete content; no page visibility guard is used.

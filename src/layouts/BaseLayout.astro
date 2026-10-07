@@ -1,13 +1,7 @@
 ---
 // Latin subsets only: other scripts (e.g. Devanagari in the i18n demo) use the system font stack.
-import '@fontsource/poppins/latin-400.css';
-import '@fontsource/poppins/latin-600.css';
-import '@fontsource/poppins/latin-800.css';
-import '@fontsource/jetbrains-mono/latin-400.css';
-import '@fontsource/jetbrains-mono/latin-500.css';
+import '@/styles/fonts.css';
 import '@/styles/global.css';
-import heroFont from '@fontsource/poppins/files/poppins-latin-800-normal.woff2?url';
-import bodyFont from '@fontsource/poppins/files/poppins-latin-400-normal.woff2?url';
 import SiteHeader from '@/components/SiteHeader.astro';
 import SiteFooter from '@/components/SiteFooter.astro';
 import { site } from '@/data/site';
@@ -49,6 +43,93 @@ const ogAlt = title ?? site.title;
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <script is:inline>
+      try {
+        const theme = localStorage.getItem('theme');
+        if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme;
+      } catch {}
+    </script>
+    <style is:inline>
+      /* Keep a themed canvas before the external stylesheet arrives. Never hide content. */
+      html {
+        color-scheme: light dark;
+        background: #f5f4ef;
+      }
+      @media (prefers-color-scheme: dark) {
+        html:not([data-theme='light']) {
+          background: #121211;
+        }
+      }
+      html[data-theme='light'] {
+        color-scheme: light;
+      }
+      html[data-theme='dark'] {
+        color-scheme: dark;
+        background: #121211;
+      }
+    </style>
+    <script is:inline>
+      // Native history remains in charge. A rebuilt page may need its position
+      // corrected after WebKit clamps the offset to partially parsed HTML.
+      (() => {
+        if (location.pathname !== '/') return;
+        const key = 'portfolioNativeReturn';
+        history.scrollRestoration = 'auto';
+        const restore = () => {
+          const position = history.state?.[key];
+          if (
+            position?.href !== location.href ||
+            !Number.isFinite(position.x) ||
+            !Number.isFinite(position.y)
+          )
+            return;
+          if (Math.abs(scrollX - position.x) > 1 || Math.abs(scrollY - position.y) > 1)
+            scrollTo({ left: position.x, top: position.y, behavior: 'instant' });
+        };
+        // WebKit may expose navigation timing only once parsing has progressed.
+        const isReturn = () =>
+          performance.getEntriesByType('navigation')[0]?.type === 'back_forward' ||
+          window.navigation?.activation?.navigationType === 'traverse';
+        addEventListener(
+          'DOMContentLoaded',
+          () => {
+            if (isReturn()) restore();
+          },
+          { once: true },
+        );
+        addEventListener('pageshow', (event) => {
+          if (event.persisted || isReturn()) restore();
+          // Native restoration can run after pageshow and overwrite a correction.
+          requestAnimationFrame(() => {
+            if (event.persisted || isReturn()) restore();
+          });
+        });
+        document.addEventListener('click', (event) => {
+          if (
+            event.defaultPrevented ||
+            event.button !== 0 ||
+            event.metaKey ||
+            event.ctrlKey ||
+            event.shiftKey ||
+            event.altKey
+          )
+            return;
+          const link = event.target instanceof Element ? event.target.closest('a') : null;
+          if (!link || link.hasAttribute('download') || (link.target && link.target !== '_self')) return;
+          const destination = new URL(link.href);
+          if (
+            destination.origin !== location.origin ||
+            !/^\/(work|writing)\/[^/]+$/.test(destination.pathname)
+          )
+            return;
+          history.replaceState(
+            { ...history.state, [key]: { href: location.href, x: scrollX, y: scrollY } },
+            '',
+          );
+        });
+      })();
+    </script>
     <title>{pageTitle}</title>
     <meta name="description" content={description} />
     {noindex ? <meta name="robots" content="noindex" /> : <link rel="canonical" href={canonical} />}
@@ -58,16 +139,40 @@ const ogAlt = title ?? site.title;
     <link rel="icon" href="/favicon-48.png" sizes="48x48" type="image/png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
-    <link rel="preload" href={heroFont} as="font" type="font/woff2" crossorigin />
-    <link rel="preload" href={bodyFont} as="font" type="font/woff2" crossorigin />
     <meta name="theme-color" content="#f5f4ef" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#121211" media="(prefers-color-scheme: dark)" />
     <script is:inline>
-      // Runs before first paint so a saved theme never flashes. Key must match src/lib/theme.ts.
-      try {
-        const theme = localStorage.getItem('theme');
-        if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme;
-      } catch {}
+      // WebKit captures a page transition's incoming frame before it jumps to the #fragment, so a link to
+      // /#work would crossfade in from the hero and then jump. Jump first if the section is already parsed
+      // (pagereveal fires just before that first frame); otherwise skip the transition. Only on a fresh
+      // navigation's first reveal: Back, reload and back/forward-cache restores keep the restored position.
+      addEventListener(
+        'pagereveal',
+        (e) => {
+          const type =
+            window.navigation?.activation?.navigationType ??
+            performance.getEntriesByType('navigation')[0]?.type;
+          if (type !== 'push' && type !== 'navigate') return;
+          if (performance.getEntriesByType('navigation')[0]?.type === 'back_forward') return;
+          if (!location.hash) return;
+          let fragment;
+          try {
+            fragment = decodeURIComponent(location.hash.slice(1));
+          } catch {
+            return;
+          }
+          const target = document.getElementById(fragment);
+          if (target) target.scrollIntoView({ block: 'start', behavior: 'instant' });
+          else e.viewTransition?.skipTransition();
+        },
+        { once: true },
+      );
+      // Smooth scrolling starts once the page (and any jump to its #fragment) has loaded; see global.css.
+      addEventListener(
+        'load',
+        () => requestAnimationFrame(() => document.documentElement.classList.add('smooth-scroll')),
+        { once: true },
+      );
     </script>
     <meta property="og:type" content={ogType} />
     <meta property="og:site_name" content={site.name} />
@@ -98,6 +203,11 @@ const ogAlt = title ?? site.title;
     )}
   </head>
   <body>
+    <script is:inline>
+      // Start decoding the inlined fonts as soon as the stylesheet has arrived (body scripts wait for it),
+      // ahead of the first text layout, so even a first visit paints in the web fonts.
+      document.fonts.forEach((face) => face.load().catch(() => {}));
+    </script>
     <a class="skip-link" href="#main">
       Skip to content
     </a>

@@ -27,6 +27,9 @@ export default defineConfig({
   },
   vite: {
     build: {
+      // Web fonts ride inside the cached stylesheet so they are ready for the first paint (src/styles/fonts.css).
+      assetsInlineLimit: (file) =>
+        /[\\/]src[\\/]assets[\\/]fonts[\\/][^\\/]+\.woff2$/.test(file) ? true : undefined,
       sourcemap: coverage ? 'inline' : false,
       // Minified code maps imprecisely onto source branches; coverage builds stay readable.
       minify: !coverage,

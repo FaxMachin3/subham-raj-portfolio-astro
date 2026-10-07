@@ -19,7 +19,9 @@ const studies = (await getCollection('work')).sort((a, b) => a.data.order - b.da
             <span class="study__meta mono">
               {study.data.company} · {study.data.role}
             </span>
-            <h3 style={`view-transition-name: study-${study.id}`}>{study.data.title}</h3>
+            <h3 style={`view-transition-name: study-${study.id}; view-transition-class: study-title`}>
+              {study.data.title}
+            </h3>
             <p>{study.data.summary}</p>
             {headline && (
               <span class="study__metric">
