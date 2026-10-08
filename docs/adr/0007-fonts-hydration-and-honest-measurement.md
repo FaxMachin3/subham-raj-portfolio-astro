@@ -12,8 +12,16 @@ should the interactive lab load later, and can every number on the page be defen
 On the user's iPhone, navigation sometimes painted before linked font files were ready. Font swapping
 re-wrapped text; earlier attempts to hide content while restoring navigation also produced blank frames.
 The five fonts (65.6 KB
-gzip, unchanged fontsource files) now ship as data URIs inside the cached stylesheet. A one-line body script
-starts decoding them before the first text layout, so even a cold first visit doesn't shift.
+gzip, unchanged fontsource files) ship as data URIs inside the cached stylesheet. Linux WebKit testing with
+a delayed stylesheet exposed a remaining fallback frame: a data URL still goes through the asynchronous
+URL loader, even when `FontFace.load()` is called before text is parsed.
+
+BaseLayout now decodes the already delivered data-URI bytes into binary `FontFace` objects before parsing
+text. It replaces a CSS face only when the binary face reports `loaded`; unsupported APIs or blocked CSSOM
+access retain the CSS path. JavaScript-disabled visits also keep the original CSS declarations. This avoids
+duplicating font payloads in HTML, additional network requests, or hiding the page while waiting for fonts.
+The binary constructor is part of the [CSS Font Loading API](https://www.w3.org/TR/css-font-loading/).
+First-frame readiness and unchanged visible heading geometry are checked on navigation and both Back paths.
 
 | Measured on (Lighthouse mobile, 3 runs) | First paint | Largest paint | Layout shift |
 | --------------------------------------- | ----------- | ------------- | ------------ |

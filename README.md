@@ -79,6 +79,10 @@ Run `npx playwright install --with-deps` once before the end-to-end tests.
 
 ### Coverage (100%, merged)
 
+CI builds the production site once, then tests that artifact in ten parallel device jobs. The aggregate
+`verify` status requires the source checks and every device job to pass. Browser reports and traces are
+uploaded even when a job fails or is cancelled. Coverage runs separately with its existing 100% gate.
+
 `npm run coverage` measures unit and end-to-end coverage together and fails unless statements, branches,
 functions and lines are all at 100% for every file in `src` (generated demo routes, `keys.gen.ts`, type
 declarations and static data excluded).
@@ -241,6 +245,7 @@ measurements. Details: [ADR 0007](docs/adr/0007-fonts-hydration-and-honest-measu
   images at build time only. Nothing reaches the browser (`npm audit --omit=dev` is clean) and the affected
   function (unzipping malformed archives) is never called with outside input.
 - **Web fonts are inlined into the stylesheet** (`src/styles/fonts.css`, ~65.6 KB gzip, cached with it).
-  This resolved navigation font swaps on the user's iPhone. Tests check all five font faces at the first
+  BaseLayout primes their binary bytes before parsing text: WebKit's data-URL loader can otherwise still
+  paint a fallback font first. Tests check all five font faces at the first
   styled frame; physical-device review still matters. The fallbacks in `tokens.css` stay metric-matched per
   weight for the first, cold visit.

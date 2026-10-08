@@ -106,29 +106,6 @@ jobs:
           BROWSERS: ${{ needs.browsers.result }}
         run: test "$CHECKS" = success && test "$BROWSERS" = success
 
-  # Fast Linux/WebKit feedback while the complete matrix runs.
-  navigation:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: npm
-      - run: npm ci
-      - run: npm run build
-      - run: npx playwright install --with-deps webkit
-      - run: npx playwright test tests/e2e/font-stability.spec.ts --project=webkit-iphone-14 --workers=1 --retries=0
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: navigation-diagnostics
-          path: |
-            playwright-report
-            test-results
-          retention-days: 7
-
   coverage:
     runs-on: ubuntu-latest
     timeout-minutes: 30

@@ -168,25 +168,25 @@ test.describe('fonts', () => {
         );
       };
       requestAnimationFrame(first);
-      addEventListener('load', () =>
-        setTimeout(() => sessionStorage.setItem(`settled:${location.pathname}`, String(width())), 300),
-      );
     });
     const forget = (path: string) =>
       page.evaluate((p) => {
         sessionStorage.removeItem(`first:${p}`);
-        sessionStorage.removeItem(`settled:${p}`);
         sessionStorage.removeItem(`fonts-first:${p}`);
       }, path);
     const check = async (path: string) => {
       await page.waitForLoadState('load');
       await page.waitForTimeout(400);
-      const [first, settled] = await page.evaluate(
-        (p) => [sessionStorage.getItem(`first:${p}`), sessionStorage.getItem(`settled:${p}`)],
-        path,
-      );
+      const first = await page.evaluate((p) => sessionStorage.getItem(`first:${p}`), path);
       // No new first frame: the page came back from the back/forward cache, already painted.
       if (first === null) return;
+      // Read the actual settled page. A restored document may run the first-frame callback without
+      // firing another load event; a load-only sessionStorage sample would then be null, not zero px.
+      const settled = await page.evaluate(() => {
+        const range = document.createRange();
+        range.selectNodeContents(document.querySelector('h1')!);
+        return Math.round(range.getBoundingClientRect().width * 10) / 10;
+      });
       const fonts = await page.evaluate(
         (p) => JSON.parse(sessionStorage.getItem(`fonts-first:${p}`) || '[]') as string[],
         path,

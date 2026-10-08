@@ -205,9 +205,36 @@ const ogAlt = title ?? site.title;
   </head>
   <body>
     <script is:inline>
-      // Start decoding the inlined fonts as soon as the stylesheet has arrived (body scripts wait for it),
-      // ahead of the first text layout, so even a first visit paints in the web fonts.
-      document.fonts.forEach((face) => face.load().catch(() => {}));
+      // A data URL still uses WebKit's asynchronous URL loader. Prime the already downloaded bytes
+      // before parsing any text instead. Keep the CSS face unless binary decoding succeeds; it also
+      // remains the normal font-loading path when JavaScript is disabled or CSSOM access is blocked.
+      (() => {
+        if (typeof FontFace === 'undefined') return;
+        for (const sheet of document.styleSheets) {
+          try {
+            for (let index = sheet.cssRules.length - 1; index >= 0; index--) {
+              const rule = sheet.cssRules[index];
+              if (!(rule instanceof CSSFontFaceRule)) continue;
+              const encoded = rule.style
+                .getPropertyValue('src')
+                .match(/data:font\/woff2;base64,([A-Za-z0-9+/=]+)/)?.[1];
+              if (!encoded) continue;
+              const bytes = Uint8Array.from(atob(encoded), (character) => character.charCodeAt(0));
+              const face = new FontFace(rule.style.getPropertyValue('font-family'), bytes, {
+                weight: rule.style.getPropertyValue('font-weight'),
+                style: rule.style.getPropertyValue('font-style'),
+                display: 'swap',
+              });
+              face.loaded.catch(() => {});
+              if (face.status !== 'loaded') continue;
+              document.fonts.add(face);
+              sheet.deleteRule(index);
+            }
+          } catch {
+            // Other-origin stylesheets and unsupported APIs retain their declarative CSS fallback.
+          }
+        }
+      })();
     </script>
     <a class="skip-link" href="#main" tabindex="0">
       Skip to content

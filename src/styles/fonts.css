@@ -2,7 +2,8 @@
  * The five web fonts are inlined into this (render-blocking, immutably cached) stylesheet as data URIs; see
  * `assetsInlineLimit` in astro.config.mjs. Linked font files, even preloaded and cached, arrive after
  * WebKit's first paint of every navigation, so iPhones showed either a font swap (`swap`) or a blank frame
- * of invisible text (`optional`/`block`). Inlined, the fonts are ready for the first frame.
+ * of invisible text (`optional`/`block`). BaseLayout primes these inlined bytes before text is parsed:
+ * data URLs alone still go through WebKit's asynchronous font loader and can paint a fallback first.
  * Sources: src/assets/fonts/README.md.
  */
 @font-face {
