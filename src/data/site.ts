@@ -8,7 +8,7 @@ export const site = {
   email: 'subhamraj4114@gmail.com',
   url: 'https://subhamraj.dev',
   description:
-    'Subham Raj is a senior frontend engineer with 8 years of React and TypeScript, specializing in web performance, accessibility and design systems. Break this site, then watch him fix it.',
+    'Subham Raj is a senior frontend engineer: 8 years of React and TypeScript, building data-heavy and AI product interfaces that are fast and accessible. Break this site, then watch him fix it.',
   links: {
     linkedin: 'https://www.linkedin.com/in/subhamraj/',
     github: 'https://github.com/FaxMachin3',

@@ -25,7 +25,7 @@ itself**, where the backend engineer can coordinate the frontend fix before anyt
 
 It is compile-time safety only; runtime validation and contract tests are the natural next step.
 
-## Internationalization that can't drift
+## Internationalization checks that catch drift
 
 I led frontend internationalization. Because TRM's users include governments, translations stay under the
 team's control rather than raw AI output. Translations load lazily and are cached, keys are generated as
@@ -48,6 +48,6 @@ engineer built the end-to-end infrastructure; the shared goal was confidence at 
 
 ## Impact
 
-- Breaking API changes surface in the PR that causes them, not in production.
-- Untranslated text cannot reach `main`.
+- Breaking changes to typed API contracts surface as type errors in the PR that causes them (compile-time only).
+- Missing translations are caught by pre-commit and CI checks before code reaches `main`.
 - **580+ merged PRs** at TRM Labs, shipped with these guardrails in place.

@@ -356,7 +356,7 @@ function useTable(): TableState {
   };
 }
 
-export default function A11yFix({ productionNote }: { productionNote: string }) {
+export default function A11yFix({ productionNote, method }: { productionNote: string; method?: string }) {
   const [variant, setVariant] = useState<'broken' | 'fixed'>('fixed');
   const [announcement, setAnnouncement] = useState('');
   const regionRef = useRef<HTMLDivElement>(null);
@@ -377,11 +377,12 @@ export default function A11yFix({ productionNote }: { productionNote: string }) 
   return (
     <FixCard
       id="a11y"
+      method={method}
       number="05"
       area="accessibility"
       title="A panel only mouse users can use"
       description="Broken: every control works with a mouse and nothing else. Clickable divs, no focus ring, an unlabeled icon, faint text. Fixed: real buttons and menus, labels, visible focus, readable contrast, and a sortable table you can drive from the keyboard."
-      measureLabel={{ before: 'live audit', after: 'live audit' }}
+      measureLabel={{ before: 'demo checks', after: 'demo checks' }}
       productionNote={productionNote}
     >
       <div

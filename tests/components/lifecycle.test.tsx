@@ -52,12 +52,12 @@ describe('useFixLifecycle', () => {
     expect($ready.get().plot).toBe(false);
   });
 
-  it('falls back to healthy and logs when a handler fails', async () => {
+  it('reports a failed run as failed (never healthy) and logs it', async () => {
     const error = vi.spyOn(console, 'error').mockImplementation(() => {});
     render(<Card handlers={{ break: vi.fn().mockRejectedValue(new Error('boom')), fix: vi.fn() }} />);
     act(() => requestTarget('plot', 'broken'));
     await settle();
-    expect($statuses.get().plot).toBe('healthy');
+    expect($statuses.get().plot).toBe('failed');
     expect(error).toHaveBeenCalledWith('[fix:plot]', expect.any(Error));
   });
 

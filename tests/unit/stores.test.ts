@@ -9,6 +9,7 @@ import {
   $targets,
   addJsBytes,
   allReady,
+  cancelInProgress,
   recordMeasurement,
   requestTarget,
   startSession,
@@ -67,6 +68,15 @@ describe('fix store', () => {
     expect(allReady()).toBe(true);
   });
 
+  it('cancels only the runs in progress, clearing their targets', () => {
+    requestTarget('plot', 'broken');
+    $statuses.setKey('jank', 'fixed');
+    cancelInProgress();
+    expect($statuses.get().plot).toBe('cancelled');
+    expect($targets.get().plot).toBeNull();
+    expect($statuses.get().jank).toBe('fixed');
+  });
+
   it('resets per-session counters', () => {
     addJsBytes(1000);
     const session = $session.get();
@@ -79,7 +89,29 @@ describe('fix store', () => {
 describe('waitForStatus', () => {
   it('resolves at once when the fix is already there', async () => {
     $statuses.setKey('bundle', 'fixed');
-    await expect(waitForStatus('bundle', 'fixed')).resolves.toBeUndefined();
+    await expect(waitForStatus('bundle', 'fixed')).resolves.toBe('fixed');
+  });
+
+  it('settles with "failed" when the run fails, instead of waiting forever', async () => {
+    const waiting = waitForStatus('network', 'broken');
+    $statuses.setKey('network', 'breaking');
+    $statuses.setKey('network', 'failed');
+    await expect(waiting).resolves.toBe('failed');
+  });
+
+  it('settles with "cancelled" when the run is cancelled or the caller aborts, and stops listening', async () => {
+    requestTarget('i18n', 'fixed');
+    const cancelled = waitForStatus('i18n', 'fixed');
+    cancelInProgress();
+    await expect(cancelled).resolves.toBe('cancelled');
+
+    const controller = new AbortController();
+    const aborted = waitForStatus('plot', 'fixed', controller.signal);
+    controller.abort();
+    await expect(aborted).resolves.toBe('cancelled');
+    $statuses.setKey('plot', 'fixed'); // a later change must not reach the settled waiter
+    await expect(waitForStatus('plot', 'fixed', controller.signal)).resolves.toBe('cancelled');
+    expect($statuses.lc).toBe(0);
   });
 
   it('waits through unrelated changes until the fix reaches the status', async () => {

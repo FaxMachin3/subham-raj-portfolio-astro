@@ -5,6 +5,7 @@ import {
   $ready,
   $statuses,
   allReady,
+  cancelInProgress,
   requestTarget,
   startSession,
   waitForStatus,
@@ -21,7 +22,7 @@ const MERGED_GLOW_MS = 1600;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 type Phase = 'idle' | 'breaking' | 'broken' | 'fixing' | 'fixed';
-type StepState = 'pending' | 'active' | 'done';
+type StepState = 'pending' | 'active' | 'done' | 'failed';
 
 interface Toast {
   title: string;
@@ -35,7 +36,8 @@ interface Progress {
   steps: Partial<Record<FixId, StepState>>;
 }
 
-const isBroken = (status: FixStatus) => status === 'broken' || status === 'breaking' || status === 'fixing';
+/** Anything short of healthy or fixed: a failed or cancelled run still needs fixing. */
+const isBroken = (status: FixStatus) => status !== 'healthy' && status !== 'fixed';
 
 export default function BreakFixControls() {
   const hydrated = useHydrated();
@@ -48,6 +50,8 @@ export default function BreakFixControls() {
   const [toastVisible, setToastVisible] = useState(false);
   const [progress, setProgress] = useState<Progress | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  // The current whole-site run. Aborting it stops the controller waiting; cards are cancelled separately.
+  const runRef = useRef<AbortController | null>(null);
 
   const notify = (title: string, body?: string, tone: Toast['tone'] = 'info', holdMs = 5200) => {
     setToast({ title, body, tone });
@@ -86,7 +90,44 @@ export default function BreakFixControls() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wordKey]);
 
+  // Only one run at a time: both buttons are disabled while one is active.
+  const beginRun = () => {
+    runRef.current = new AbortController();
+    return runRef.current.signal;
+  };
+
+  /** Leaving the page (or unmounting) abandons the run: obsolete work stops instead of finishing unseen. */
+  useEffect(() => {
+    const abandon = () => {
+      clearTimeout(toastTimer.current);
+      cancelInProgress();
+      if (!runRef.current) return;
+      runRef.current.abort();
+      runRef.current = null;
+      setPhase('idle');
+    };
+    addEventListener('pagehide', abandon);
+    return () => {
+      removeEventListener('pagehide', abandon);
+      abandon();
+    };
+  }, []);
+
+  const endRunWithFailure = (ids: readonly FixId[], action: 'break' | 'fix') => {
+    for (const id of ids) step(id, 'failed');
+    const names = ids.map((id) => FIX_META[id].label).join(', ');
+    setPhase('idle');
+    runRef.current = null;
+    notify(
+      action === 'break' ? 'Some demos didn’t break.' : 'A fix didn’t complete.',
+      `${names}: ${action === 'break' ? 'press “Break this site”' : 'press “Let Subham fix it”'} to try again.`,
+      'warn',
+      8000,
+    );
+  };
+
   const breakAll = async () => {
+    const signal = beginRun();
     setPhase('breaking');
     startSession();
     clearRequestLog();
@@ -98,12 +139,18 @@ export default function BreakFixControls() {
       requestTarget(id, 'broken', { quick: true });
       step(id, 'done');
       await sleep(STAGGER_MS);
+      if (signal.aborted) return;
     }
     await sleep(400);
+    if (signal.aborted) return;
     step('plot', 'active');
     requestTarget('plot', 'broken', { quick: true });
-    await Promise.all(BREAK_ORDER.map((id) => waitForStatus(id, 'broken')));
+    const outcomes = await Promise.all(BREAK_ORDER.map((id) => waitForStatus(id, 'broken', signal)));
+    if (signal.aborted) return;
+    const failed = BREAK_ORDER.filter((_, i) => outcomes[i] !== 'broken');
+    if (failed.length) return endRunWithFailure(failed, 'break');
     step('plot', 'done');
+    runRef.current = null;
     setPhase('broken');
     notify(
       'Site broken. Six issues, all measured.',
@@ -113,6 +160,7 @@ export default function BreakFixControls() {
   };
 
   const fixAll = async () => {
+    const signal = beginRun();
     setPhase('fixing');
     startSession();
     clearRequestLog();
@@ -123,14 +171,18 @@ export default function BreakFixControls() {
       step(id, 'active');
       notify(`Commit ${count}`, FIX_META[id].commit, 'warn');
       requestTarget(id, 'fixed', { quick: true });
-      await waitForStatus(id, 'fixed');
+      const outcome = await waitForStatus(id, 'fixed', signal);
+      if (signal.aborted) return;
+      if (outcome !== 'fixed') return endRunWithFailure([id], 'fix');
       step(id, 'done');
       notify(`✓ Commit ${count}`, FIX_META[id].commit);
       await sleep(BETWEEN_FIXES_MS);
+      if (signal.aborted) return;
     }
+    runRef.current = null;
     $prState.set('merged');
     setPhase('fixed');
-    notify('PR #581 merged.', 'Every number on this page was measured on your device.', 'info', 6000);
+    notify('PR #581 merged.', 'Every demo number was measured on your device.', 'info', 6000);
     await sleep(MERGED_GLOW_MS);
     setPhase('idle');
   };

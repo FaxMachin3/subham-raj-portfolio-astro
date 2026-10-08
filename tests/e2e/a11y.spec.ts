@@ -9,6 +9,7 @@ const PAGES = [
   '/work/orion-chat',
   '/work/engineering-leverage',
   '/resume',
+  '/accessibility',
   '/404',
 ];
 const WCAG = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];

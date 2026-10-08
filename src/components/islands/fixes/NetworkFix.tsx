@@ -18,17 +18,26 @@ interface Entity {
   id: number;
   name?: string;
   risk?: string;
+  /** The request failed (network, HTTP error or bad payload); the panel offers a retry. */
+  failed?: boolean;
 }
+
+const isEntity = (data: unknown): data is Required<Omit<Entity, 'failed'>> =>
+  typeof data === 'object' &&
+  data !== null &&
+  typeof (data as Entity).name === 'string' &&
+  typeof (data as Entity).risk === 'string';
 
 const emptyEntities = (): Entity[] => Array.from({ length: ENTITY_COUNT }, (_, i) => ({ id: i + 1 }));
 
-export default function NetworkFix({ productionNote }: { productionNote: string }) {
+export default function NetworkFix({ productionNote, method }: { productionNote: string; method?: string }) {
   const [mode, setMode] = useState<Mode>('fixed');
   const [entities, setEntities] = useState(emptyEntities);
   const [banner, setBanner] = useState<'hidden' | 'shown'>('hidden');
   const [pollRate, setPollRate] = useState(0);
   const [runId, setRunId] = useState(0);
   const [activated, setActivated] = useState(false);
+  const [pollingActive, setPollingActive] = useState(true);
 
   const rootRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
@@ -36,11 +45,36 @@ export default function NetworkFix({ productionNote }: { productionNote: string 
   const visibleRef = useRef(false);
   const pollTimes = useRef<number[]>([]);
   const runRef = useRef(0);
+  // Aborts the current run's panel requests when a new run starts or the card unmounts.
+  const fetchesRef = useRef(new AbortController());
+  const bannerTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const loadEntity = useCallback(async (id: number, run: number) => {
-    const response = await trackedFetch(`/data/entities/${id}.json`);
-    const data = (await response.json()) as Required<Entity>;
-    if (run === runRef.current) setEntities((prev) => prev.map((e) => (e.id === id ? data : e)));
+    const { signal } = fetchesRef.current;
+    const update = (next: Entity) =>
+      run === runRef.current && setEntities((prev) => prev.map((e) => (e.id === id ? next : e)));
+    try {
+      const response = await trackedFetch(`/data/entities/${id}.json`, { signal }, 'network');
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data: unknown = await response.json();
+      if (!isEntity(data)) throw new Error('Unexpected panel data');
+      update({ id, name: data.name, risk: data.risk });
+    } catch {
+      if (!signal.aborted) update({ id, failed: true });
+    }
+  }, []);
+
+  useEffect(() => {
+    const stop = () => {
+      fetchesRef.current.abort();
+      clearTimeout(bannerTimer.current);
+      setPollingActive(false);
+    };
+    addEventListener('pagehide', stop);
+    return () => {
+      removeEventListener('pagehide', stop);
+      stop();
+    };
   }, []);
 
   // Track whether the card is on screen: the late banner only appears while it is, so the shift is visible.
@@ -103,27 +137,43 @@ export default function NetworkFix({ productionNote }: { productionNote: string 
 
   // Status polling: frantic when broken (capped at 20 s), every 20 s when fixed. Paused when the tab is hidden.
   useEffect(() => {
+    if (!pollingActive) return;
     const interval = mode === 'broken' ? BROKEN_POLL_MS : HEALTHY_POLL_MS;
     const startedAt = performance.now();
+    const polls = new AbortController();
     const timer = setInterval(() => {
       if (document.hidden) return;
       if (mode === 'broken' && performance.now() - startedAt > BROKEN_POLL_LIMIT_MS) return;
       pollTimes.current.push(performance.now());
-      void trackedFetch('/data/status.json', { cache: 'no-store' });
+      // A failed status check is still a request made; there is nothing to show for it.
+      trackedFetch('/data/status.json', { cache: 'no-store', signal: polls.signal }, 'network').catch(
+        () => {},
+      );
     }, interval);
-    return () => clearInterval(timer);
-  }, [mode, runId]);
+    return () => {
+      clearInterval(timer);
+      polls.abort();
+    };
+  }, [mode, runId, pollingActive]);
 
+  /** Shows the late banner once the card is on screen. Stops when the run is aborted or the card unmounts. */
   const scheduleBanner = (signal: AbortSignal) => {
-    const show = () => !signal.aborted && setBanner('shown');
-    const wait = () => (visibleRef.current ? setTimeout(show, BANNER_DELAY_MS) : setTimeout(wait, 250));
+    const show = () => setBanner('shown');
+    const wait = () => {
+      bannerTimer.current = visibleRef.current ? setTimeout(show, BANNER_DELAY_MS) : setTimeout(wait, 250);
+    };
+    signal.addEventListener('abort', () => clearTimeout(bannerTimer.current), { once: true });
     wait();
   };
 
   const reset = (next: Mode) => {
+    fetchesRef.current.abort();
+    fetchesRef.current = new AbortController();
+    clearTimeout(bannerTimer.current);
     runRef.current += 1;
     setRunId(runRef.current);
     setActivated(true);
+    setPollingActive(true);
     shiftRef.current = 0;
     setBanner('hidden');
     setEntities(emptyEntities());
@@ -132,8 +182,19 @@ export default function NetworkFix({ productionNote }: { productionNote: string 
   };
 
   const run = async (next: Mode, signal: AbortSignal): Promise<Measurement> => {
+    if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
     reset(next);
-    const counting = countRequestsDuring(MEASURE_MS, signal);
+    const fetches = fetchesRef.current;
+    signal.addEventListener(
+      'abort',
+      () => {
+        fetches.abort();
+        clearTimeout(bannerTimer.current);
+        setPollingActive(false);
+      },
+      { once: true },
+    );
+    const counting = countRequestsDuring(MEASURE_MS, signal, 'network');
     if (next === 'broken') {
       const thisRun = runRef.current;
       for (let id = 1; id <= ENTITY_COUNT; id++) void loadEntity(id, thisRun);
@@ -163,6 +224,7 @@ export default function NetworkFix({ productionNote }: { productionNote: string 
   return (
     <FixCard
       id="network"
+      method={method}
       number="04"
       area="network"
       title="Requests nobody asked for"
@@ -183,12 +245,23 @@ export default function NetworkFix({ productionNote }: { productionNote: string 
             <li
               key={entity.id}
               data-id={entity.id}
-              className={`entity${entity.name ? '' : ' entity--waiting skeleton'}`}
+              className={`entity${entity.name || entity.failed ? '' : ' entity--waiting skeleton'}`}
             >
               {entity.name ? (
                 <>
                   <span>{entity.name}</span>
                   <span className="mono">{entity.risk}</span>
+                </>
+              ) : entity.failed ? (
+                <>
+                  <span>Couldn’t load panel {entity.id}</span>
+                  <button
+                    type="button"
+                    className="btn btn--sm"
+                    onClick={() => void loadEntity(entity.id, runRef.current)}
+                  >
+                    Retry
+                  </button>
                 </>
               ) : (
                 <span className="sr-only">Loading panel {entity.id}</span>

@@ -1,0 +1,38 @@
+name: Production smoke check
+
+on:
+  # This project's Cloudflare integration reports deployments as check runs.
+  check_run:
+    types: [completed]
+  schedule:
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+    inputs:
+      url:
+        description: Site to check
+        default: https://subhamraj.dev
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    if: >-
+      github.event_name != 'check_run' ||
+      (github.event.check_run.name == 'Cloudflare Pages' &&
+       github.event.check_run.app.slug == 'cloudflare-workers-and-pages' &&
+       github.event.check_run.conclusion == 'success' &&
+       github.event.check_run.head_sha == github.sha)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Check the deployed site
+        run: node scripts/smoke.mjs "$URL"
+        env:
+          URL: ${{ github.event.inputs.url || 'https://subhamraj.dev' }}

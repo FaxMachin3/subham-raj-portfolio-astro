@@ -1,21 +1,34 @@
 export interface FrameReport {
+  /** Estimated frames the browser skipped: gaps longer than ~1.5 frames, counted in whole frames. */
   dropped: number;
   longestMs: number;
+  /** The display's frame interval, from the median gap (≈16.7 ms at 60 Hz, ≈8.3 ms at 120 Hz). */
+  frameMs: number;
+  /** False when too few frames were sampled to say anything; the UI then shows "n/a", never a perfect 0. */
+  enough: boolean;
 }
 
-const FRAME_MS = 1000 / 60;
-const JANK_THRESHOLD_MS = 25;
+const MIN_GAPS = 5;
+const FALLBACK_FRAME_MS = 1000 / 60;
 
-/** Counts frames the browser failed to paint, from consecutive requestAnimationFrame timestamps. */
-export function analyzeFrames(timestamps: readonly number[], frameMs = FRAME_MS): FrameReport {
+/** Median gap between frames, clamped to plausible displays (30–240 Hz). */
+export function frameInterval(gaps: readonly number[]): number {
+  if (!gaps.length) return FALLBACK_FRAME_MS;
+  const sorted = [...gaps].sort((a, b) => a - b);
+  const median = sorted[Math.floor(sorted.length / 2)]!;
+  return Math.min(1000 / 30, Math.max(1000 / 240, median));
+}
+
+/**
+ * Estimates dropped frames from consecutive requestAnimationFrame timestamps. This is an estimate:
+ * animation frames are not proof of paints, and the frame budget comes from this display's own cadence.
+ */
+export function analyzeFrames(timestamps: readonly number[]): FrameReport {
+  const gaps = timestamps.slice(1).map((t, i) => t - timestamps[i]!);
+  const frameMs = frameInterval(gaps);
   let dropped = 0;
-  let longestMs = 0;
-  for (let i = 1; i < timestamps.length; i++) {
-    const gap = timestamps[i]! - timestamps[i - 1]!;
-    longestMs = Math.max(longestMs, gap);
-    if (gap > JANK_THRESHOLD_MS) dropped += Math.round(gap / frameMs) - 1;
-  }
-  return { dropped, longestMs };
+  for (const gap of gaps) if (gap > frameMs * 1.5) dropped += Math.round(gap / frameMs) - 1;
+  return { dropped, longestMs: Math.max(0, ...gaps), frameMs, enough: gaps.length >= MIN_GAPS };
 }
 
 /** Records animation-frame timestamps for `durationMs`. */

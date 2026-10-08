@@ -120,16 +120,27 @@ test.describe('fonts', () => {
     await page.waitForTimeout(1000);
     const shift = await page.evaluate(
       () =>
-        new Promise<number>((resolve) => {
+        new Promise<{ total: number; sources: string[] }>((resolve) => {
           let total = 0;
+          const sources: string[] = [];
           new PerformanceObserver((list) => {
-            for (const entry of list.getEntries() as (PerformanceEntry & { value: number })[])
+            for (const entry of list.getEntries() as (PerformanceEntry & {
+              value: number;
+              sources?: { node?: Node }[];
+            })[]) {
               total += entry.value;
+              for (const source of entry.sources ?? [])
+                sources.push(
+                  source.node instanceof Element
+                    ? source.node.outerHTML.slice(0, 300)
+                    : (source.node?.parentElement?.outerHTML.slice(0, 300) ?? String(source.node)),
+                );
+            }
           }).observe({ type: 'layout-shift', buffered: true });
-          setTimeout(() => resolve(total), 100);
+          setTimeout(() => resolve({ total, sources }), 100);
         }),
     );
-    expect(shift).toBe(0);
+    expect(shift.total, JSON.stringify(shift.sources)).toBe(0);
   });
 
   test('every navigation paints its first frame in the web fonts', async ({ page }) => {

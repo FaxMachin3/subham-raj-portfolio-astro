@@ -54,15 +54,35 @@ export function allReady(ready = $ready.get()): boolean {
   return FIX_IDS.every((id) => ready[id]);
 }
 
-/** Resolves when a fix reaches `status`, or immediately if it already has. */
-export function waitForStatus(id: FixId, status: FixStatus): Promise<void> {
+/** Abandons every run in progress: each card aborts its work and shows Cancelled. */
+export function cancelInProgress(): void {
+  const statuses = $statuses.get();
+  for (const id of FIX_IDS) {
+    if (statuses[id] !== 'breaking' && statuses[id] !== 'fixing') continue;
+    $targets.setKey(id, null);
+    $statuses.setKey(id, 'cancelled');
+  }
+}
+
+/**
+ * Settles with the status a fix ends on: `status` when it gets there, or `failed`/`cancelled` when its run
+ * ends another way, or `cancelled` when `signal` aborts. It always settles and always unsubscribes.
+ */
+export function waitForStatus(id: FixId, status: FixStatus, signal?: AbortSignal): Promise<FixStatus> {
+  const settled = (s: FixStatus) => s === status || s === 'failed' || s === 'cancelled';
   return new Promise((resolve) => {
-    if ($statuses.get()[id] === status) return resolve();
-    const unsubscribe = $statuses.subscribe((statuses) => {
-      if (statuses[id] === status) {
-        queueMicrotask(() => unsubscribe());
-        resolve();
-      }
+    const current = $statuses.get()[id];
+    if (signal?.aborted) return resolve('cancelled');
+    if (settled(current)) return resolve(current);
+    const finish = (result: FixStatus) => {
+      unlisten();
+      signal?.removeEventListener('abort', onAbort);
+      resolve(result);
+    };
+    const onAbort = () => finish('cancelled');
+    const unlisten = $statuses.listen((statuses) => {
+      if (settled(statuses[id])) finish(statuses[id]);
     });
+    signal?.addEventListener('abort', onAbort, { once: true });
   });
 }

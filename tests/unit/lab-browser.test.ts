@@ -167,4 +167,33 @@ describe('request log', () => {
     controller.abort();
     expect(await early).toBeGreaterThanOrEqual(0);
   });
+
+  it('settles an already-aborted window immediately without leaving a timer', async () => {
+    vi.useFakeTimers();
+    const controller = new AbortController();
+    controller.abort();
+    await expect(countRequestsDuring(60_000, controller.signal)).resolves.toBe(0);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('keeps another demo from contaminating the network measurement', async () => {
+    vi.useFakeTimers();
+    const counting = countRequestsDuring(1000, undefined, 'network');
+    recordRequest(performance.now(), 'network');
+    recordRequest(performance.now(), 'demo');
+    await vi.advanceTimersByTimeAsync(1000);
+    await expect(counting).resolves.toBe(1);
+    expect(requestsInLast(60_000)).toBe(2);
+  });
+
+  it('removes the abort listener when a measurement finishes normally', async () => {
+    vi.useFakeTimers();
+    const controller = new AbortController();
+    const remove = vi.spyOn(controller.signal, 'removeEventListener');
+    const result = countRequestsDuring(1000, controller.signal);
+    await vi.advanceTimersByTimeAsync(1000);
+    await result;
+    expect(remove).toHaveBeenCalledWith('abort', expect.any(Function));
+    expect(vi.getTimerCount()).toBe(0);
+  });
 });

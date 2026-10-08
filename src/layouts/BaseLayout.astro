@@ -48,6 +48,7 @@ const ogAlt = title ?? site.title;
       try {
         const theme = localStorage.getItem('theme');
         if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme;
+        if (localStorage.getItem('hud') === 'collapsed') document.documentElement.dataset.hud = 'collapsed';
       } catch {}
     </script>
     <style is:inline>
@@ -208,7 +209,7 @@ const ogAlt = title ?? site.title;
       // ahead of the first text layout, so even a first visit paints in the web fonts.
       document.fonts.forEach((face) => face.load().catch(() => {}));
     </script>
-    <a class="skip-link" href="#main">
+    <a class="skip-link" href="#main" tabindex="0">
       Skip to content
     </a>
     <SiteHeader />

@@ -25,7 +25,8 @@
     "test:coverage": "COVERAGE=1 vitest run",
     "test:e2e:coverage": "COVERAGE=1 astro build && COVERAGE=1 playwright test --project=chromium-desktop --project=android-small-360; status=$?; astro build && exit $status",
     "coverage": "npm run test:coverage && npm run test:e2e:coverage && node coverage-config/merge.mjs",
-    "walkthrough": "playwright test --config playwright.walkthrough.config.ts"
+    "walkthrough": "playwright test --config playwright.walkthrough.config.ts",
+    "smoke": "node scripts/smoke.mjs"
   },
   "dependencies": {
     "@astrojs/mdx": "^8.0.2",

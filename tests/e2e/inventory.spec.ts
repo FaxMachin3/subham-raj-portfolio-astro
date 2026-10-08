@@ -9,6 +9,7 @@ import { tap, waitForDemos } from './helpers';
 const PAGES = [
   '/',
   '/resume',
+  '/accessibility',
   '/work/graph-performance',
   '/work/design-system',
   '/work/orion-chat',

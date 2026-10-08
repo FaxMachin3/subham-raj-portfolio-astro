@@ -254,6 +254,27 @@ test.describe('individual demos', () => {
     await expect(page.getByTestId('i18n-note')).toContainText('from cache, 0 requests');
   });
 
+  test('a slow translation never overwrites a newer choice', async ({ page }) => {
+    const panel = page.getByTestId('i18n-panel');
+    const select = page.getByLabel('Language');
+    await select.selectOption('ja');
+    await expect(panel).toContainText('調査の概要');
+    // Vite ships each translation as its own chunk; hold Spanish back so Japanese is picked before it lands.
+    let released = false;
+    await page.route(/\/_astro\/es\.[^/]+\.js$/, async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+      released = true;
+      await route.continue();
+    });
+    await select.selectOption('es');
+    await select.selectOption('ja');
+    await expect.poll(() => released, { timeout: 10_000 }).toBe(true);
+    await page.waitForTimeout(300);
+    await expect(select).toHaveValue('ja');
+    await expect(panel).toContainText('調査の概要');
+    await expect(page.getByTestId('i18n-note')).toHaveText('ja.json · from cache, 0 requests');
+  });
+
   test('entity panels load as the list scrolls', async ({ page }) => {
     const card = page.getByTestId('fix-network');
     await card.scrollIntoViewIfNeeded();

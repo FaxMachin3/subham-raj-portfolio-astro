@@ -10,7 +10,7 @@ const PALETTE = ['#34d399', '#60a5fa', '#f472b6', '#fbbf24', '#a78bfa', '#fb923c
 const TARGET_FREEZE_MS = 1200;
 const STREAM_FRAMES = 12;
 
-export default function PlotFix({ productionNote }: { productionNote: string }) {
+export default function PlotFix({ productionNote, method }: { productionNote: string; method?: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const lastNodes = useRef<PlotNode[]>([]);
   const countRef = useRef<number | null>(null);
@@ -65,13 +65,18 @@ export default function PlotFix({ productionNote }: { productionNote: string }) 
     draw(plotLinear(generateNodes(1600)));
     const observer = new ResizeObserver(() => draw(lastNodes.current));
     observer.observe(canvasRef.current!);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      // A run counter, not a DOM node: bumping the live value is exactly what stops a scheduled draw.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      streamRef.current++;
+    };
   }, [draw]);
 
   const nodeCount = () => {
     if (countRef.current === null) {
       countRef.current = calibrateCount(TARGET_FREEZE_MS);
-      setCalibration(`${formatCount(countRef.current)} elements, calibrated to ~1–2 s here`);
+      setCalibration(`${formatCount(countRef.current)} incoming records, calibrated to ~1–2 s here`);
     }
     return countRef.current;
   };
@@ -92,7 +97,7 @@ export default function PlotFix({ productionNote }: { productionNote: string }) 
         value: ms,
         unit: 'ms',
         display: formatMs(ms),
-        detail: `${formatCount(count)} elements · main thread blocked`,
+        detail: `${formatCount(count)} records → ${formatCount(result.length)} unique · main thread blocked`,
         supported: true,
       };
     },
@@ -109,7 +114,7 @@ export default function PlotFix({ productionNote }: { productionNote: string }) 
         value: ms,
         unit: 'ms',
         display: formatMs(ms),
-        detail: `${formatCount(count)} elements · same output`,
+        detail: `${formatCount(count)} records → ${formatCount(result.length)} unique · same output`,
         supported: true,
       };
     },
@@ -118,6 +123,7 @@ export default function PlotFix({ productionNote }: { productionNote: string }) 
   return (
     <FixCard
       id="plot"
+      method={method}
       number="01"
       area="performance"
       wide

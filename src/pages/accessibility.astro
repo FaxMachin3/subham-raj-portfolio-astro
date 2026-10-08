@@ -1,0 +1,78 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { site } from '@/data/site';
+import updated from '@/data/updated.json';
+---
+
+<BaseLayout
+  title="Accessibility"
+  description={`How ${site.name}'s portfolio is built and tested for accessibility: the WCAG 2.2 AA target, what is tested, and known limits.`}
+>
+  <article class="wrap a11y-statement prose">
+    <p class="eyebrow">Accessibility statement</p>
+    <h1>Accessibility</h1>
+    <p>
+      This site aims to meet <strong>WCAG 2.2 level AA</strong>. Accessibility is part of what I build for a
+      living, so it is tested like any other behaviour, and the gaps are listed here rather than hidden.
+    </p>
+
+    <h2>What is tested automatically, on every change</h2>
+    <ul>
+      <li>
+        Automated WCAG 2.2 A and AA checks (axe) on every page, in light and dark themes, healthy and broken
+        states, across 10 device profiles in Chromium, WebKit and Firefox.
+      </li>
+      <li>
+        Keyboard-only use: a skip link, visible focus that is never hidden behind the sticky header or the
+        health bar, and a data table with one Tab stop and arrow-key navigation.
+      </li>
+      <li>Reduced motion: animations, page transitions and the page-freezing demos are turned off.</li>
+      <li>
+        Text spacing overrides (WCAG 1.4.12) clip nothing, pages work at a 320 px width without sideways
+        scrolling, and controls have targets of at least 24 px.
+      </li>
+      <li>Without JavaScript, the case studies, résumé and contact details are all still readable.</li>
+    </ul>
+
+    <h2>Known limits</h2>
+    <ul>
+      <li>
+        Screen-reader testing with VoiceOver, NVDA and TalkBack is not yet complete. Automated checks cannot
+        replace it.
+      </li>
+      <li>
+        The demos re-create real problems on purpose: one freezes the page for a second or two, and one shows
+        raw translation keys. They only do this when you ask them to, and the freezing ones are skipped if you
+        prefer reduced motion.
+      </li>
+      <li>
+        The accessibility demo's numbers come from three automated checks on one panel. They illustrate a fix;
+        they are not a conformance audit.
+      </li>
+    </ul>
+
+    <h2>Found a problem?</h2>
+    <p>
+      Please tell me at <a href={`mailto:${site.email}`}>{site.email}</a>. I treat accessibility problems as
+      bugs.
+    </p>
+    <p class="a11y-statement__date">Last reviewed {updated.site}.</p>
+  </article>
+</BaseLayout>
+
+<style>
+  .a11y-statement {
+    padding-block: var(--space-16);
+    max-width: 760px;
+  }
+
+  h1 {
+    margin: 0 0 var(--space-4);
+    font-size: clamp(2rem, 1.4rem + 3vw, 3.4rem);
+  }
+
+  .a11y-statement__date {
+    color: var(--color-muted);
+    font-size: 0.85rem;
+  }
+</style>

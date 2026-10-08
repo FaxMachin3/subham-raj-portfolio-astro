@@ -1,4 +1,5 @@
 ---
+import { FIX_METHODS } from '@/fixes/methods';
 import PlotFix from '@/components/islands/fixes/PlotFix';
 import JankFix from '@/components/islands/fixes/JankFix';
 import BundleFix from '@/components/islands/fixes/BundleFix';
@@ -16,7 +17,7 @@ const adoption = requireMetric('designSystemAdoption');
 const migration = optionalMetric('designSystemMigration');
 
 const notes = {
-  plot: `In production at TRM Labs: ${plotMatching.label} went from ${plotMatching.value} after a ${perfPrs.value} PR push he led.`,
+  plot: `In production at TRM Labs: ${plotMatching.label} went from ${plotMatching.value} after a ${perfPrs.value} PR push I led.`,
   jank: 'At TRM Labs: deferring sidebar work while the graph resized removed visible jank.',
   bundle: `At TRM Labs: route-level code splitting cut the initial bundle by ${bundleCut.value}. This demo’s chunks are sized to mirror that.`,
   network:
@@ -31,16 +32,16 @@ const notes = {
   <div class="section-head" data-reveal>
     <h2 id="fixes-title">Six things I fix for a living</h2>
     <p>
-      Each card can be broken and fixed on its own. Problems are re-created with synthetic workloads; the
-      measurements are real.
+      An interactive lab. Each card can be broken and fixed on its own: problems are re-created with synthetic
+      workloads, and the measurements are real, taken in your browser. Each card explains how it measures.
     </p>
   </div>
   <div class="fix-grid">
-    <PlotFix client:idle productionNote={notes.plot} />
-    <JankFix client:idle productionNote={notes.jank} />
-    <BundleFix client:idle productionNote={notes.bundle} />
-    <NetworkFix client:idle productionNote={notes.network} />
-    <A11yFix client:idle productionNote={notes.a11y} />
-    <I18nFix client:idle />
+    <PlotFix client:idle productionNote={notes.plot} method={FIX_METHODS.plot} />
+    <JankFix client:idle productionNote={notes.jank} method={FIX_METHODS.jank} />
+    <BundleFix client:idle productionNote={notes.bundle} method={FIX_METHODS.bundle} />
+    <NetworkFix client:idle productionNote={notes.network} method={FIX_METHODS.network} />
+    <A11yFix client:idle productionNote={notes.a11y} method={FIX_METHODS.a11y} />
+    <I18nFix client:idle method={FIX_METHODS.i18n} />
   </div>
 </section>

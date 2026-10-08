@@ -1,8 +1,11 @@
 export const FIX_IDS = ['plot', 'jank', 'bundle', 'network', 'a11y', 'i18n'] as const;
 export type FixId = (typeof FIX_IDS)[number];
 
-/** Where a fix currently is. `healthy` is the untouched initial state. */
-export type FixStatus = 'healthy' | 'breaking' | 'broken' | 'fixing' | 'fixed';
+/**
+ * Where a fix currently is. `healthy` is the untouched initial state; `failed` means the last run threw and
+ * `cancelled` that it was abandoned (the visitor left mid-run). Neither is ever shown as healthy or fixed.
+ */
+export type FixStatus = 'healthy' | 'breaking' | 'broken' | 'fixing' | 'fixed' | 'failed' | 'cancelled';
 
 /** What the controller wants a fix to be. Cards reconcile towards this. */
 export type FixTarget = 'broken' | 'fixed';

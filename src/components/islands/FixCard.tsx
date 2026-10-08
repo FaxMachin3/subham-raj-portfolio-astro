@@ -15,6 +15,8 @@ const STATUS_LABEL: Record<FixStatus, string> = {
   broken: 'Broken',
   fixing: 'Fixing…',
   fixed: 'Fixed ✓',
+  failed: 'Failed · try again',
+  cancelled: 'Cancelled',
 };
 
 interface FixCardProps {
@@ -29,6 +31,8 @@ interface FixCardProps {
   /** Extra controls rendered next to Break/Fix (for example "Toggle sidebar"). */
   actions?: ReactNode;
   footnote?: ReactNode;
+  /** "How this is measured" (src/fixes/methods.ts), rendered server-side and passed in. */
+  method?: string;
   children: ReactNode;
 }
 
@@ -64,6 +68,7 @@ export default function FixCard({
   wide,
   actions,
   footnote,
+  method,
   children,
 }: FixCardProps) {
   const status = useStore($statuses, { keys: [id] })[id];
@@ -125,6 +130,13 @@ export default function FixCard({
         {/* Rendered even while empty: its space is reserved, so the first result doesn't push the page down. */}
         {footnote !== undefined && <span className="fix-card__note">{footnote}</span>}
       </div>
+      {method && (
+        <details className="fix-card__how">
+          <summary>How this is measured</summary>
+          <p>{method}</p>
+          {productionNote && <p>The TRM Labs note below is a past production result, not measured here.</p>}
+        </details>
+      )}
       {productionNote && <p className="fix-card__prod">{productionNote}</p>}
     </article>
   );

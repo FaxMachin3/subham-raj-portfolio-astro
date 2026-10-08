@@ -64,16 +64,16 @@ Why it is built this way is recorded in [docs/adr](docs/adr).
 
 `npm run verify` runs them in order and fails fast:
 
-| Gate           | Command                | What it checks                                                                                                       |
-| -------------- | ---------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| i18n keys      | `npm run i18n:check`   | Generated key types match the locale files.                                                                          |
-| Types          | `npm run check`        | `astro check`, strict TypeScript, `noUncheckedIndexedAccess`.                                                        |
-| Lint           | `npm run lint`         | ESLint 10, typescript-eslint, Astro and React Hooks rules.                                                           |
-| Format         | `npm run format:check` | Prettier, including `.astro` files.                                                                                  |
-| Unit/component | `npm run test`         | Vitest: lab core, stores, metrics guard, colour tokens, SEO helpers, components.                                     |
-| Build          | `npm run build`        | Static build; fails if an unapproved metric is required.                                                             |
-| Budget         | `npm run budget`       | Homepage JS ≤ 90 KB, CSS ≤ 10 KB and inlined web fonts ≤ 70 KB gzip (static imports).                                |
-| End to end     | `npm run test:e2e`     | Playwright on Chromium, WebKit and Firefox, 10 device profiles, axe WCAG 2.2 AA, no horizontal overflow, CLS checks. |
+| Gate           | Command                | What it checks                                                                                                                                         |
+| -------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| i18n keys      | `npm run i18n:check`   | Generated key types match the locale files.                                                                                                            |
+| Types          | `npm run check`        | `astro check`, strict TypeScript, `noUncheckedIndexedAccess`.                                                                                          |
+| Lint           | `npm run lint`         | ESLint 10, typescript-eslint, Astro and React Hooks rules.                                                                                             |
+| Format         | `npm run format:check` | Prettier, including `.astro` files.                                                                                                                    |
+| Unit/component | `npm run test`         | Vitest: lab core, stores, metrics guard, colour tokens, SEO helpers, components.                                                                       |
+| Build          | `npm run build`        | Static build; fails if an unapproved metric is required.                                                                                               |
+| Budget         | `npm run budget`       | Gzip budgets: initial JS ≤ 100 KB (incl. inline scripts), on-demand lab JS ≤ 15 KB, CSS ≤ 10 KB, inlined fonts ≤ 70 KB. Prints the commit it measured. |
+| End to end     | `npm run test:e2e`     | Playwright on Chromium, WebKit and Firefox, 10 device profiles, axe WCAG 2.2 AA, no horizontal overflow, CLS checks.                                   |
 
 Run `npx playwright install --with-deps` once before the end-to-end tests.
 
@@ -163,8 +163,8 @@ Animation explains what is happening; it never decorates. The break/fix run is c
   homepage in this tab (`src/lib/back-link.ts`), so it returns to the exact scroll position like Back does.
   Smooth scrolling only starts after `load`, so arriving at `/#work` never animates down from the top.
 
-Rules: page content uses transform-type animations; title snapshots fade sequentially during page transitions
-to avoid overlapping text. Layout properties do not animate, so nothing shifts; the LCP headline is never hidden; everything is CSS or the platform's view
+Rules: section entrances use transforms to avoid fading body text or changing layout. Navigation snapshots
+and short demo/title effects also use opacity; the LCP headline is never hidden. Everything is CSS or the platform's view
 transitions, with JavaScript only for the count-up, the plot stream and the x-ray timelines (loaded on first use,
 with their CSS, so they add nothing to the initial page); `prefers-reduced-motion` turns it all
 off. See [ADR 0005](docs/adr/0005-motion.md).
@@ -204,6 +204,12 @@ Demo workloads are synthetic and labelled as such. Live readings (frame times, l
 layout shift) are measured on the visitor's device. Browsers without a given `PerformanceObserver` entry type
 (for example `longtask` in Safari and Firefox) show "n/a" instead of a made-up value.
 
+### Production smoke check
+
+`npm run smoke -- https://subhamraj.dev` checks every page in the live sitemap, the résumé PDF, homepage social image,
+favicon, crawler files, a real 404 and immutable caching on built assets. `.github/workflows/smoke.yml` runs
+it after a successful Cloudflare check for the latest default-branch commit, daily, and on demand.
+
 ## Deployment
 
 The build is fully static (`dist/`), deployed on **Cloudflare Pages** (step-by-step in
@@ -212,6 +218,15 @@ hashed `/_astro/*` assets are immutable, `/data/status.json` is `no-store` becau
 and social images cache for a day. `vercel.json` mirrors the same settings if you prefer Vercel.
 
 Update `site` in `astro.config.mjs` and `url` in `src/data/site.ts` if the domain is not `subhamraj.dev`.
+
+## Failure, cancellation and measurement honesty
+
+Every demo has explicit **failed** and **cancelled** states (never shown as healthy or fixed). The
+whole-site controller ends a run with a message and usable controls when a demo fails, and leaving the page
+cancels work in flight. Each card has a "How this is measured" note (`src/fixes/methods.ts`), the health bar
+shows nothing until it has a real sample, and production results are labelled as history, not live
+measurements. Details: [ADR 0007](docs/adr/0007-fonts-hydration-and-honest-measurement.md).
+`/accessibility` states the WCAG 2.2 AA target, what is tested and the known limits.
 
 ## Known decisions
 
@@ -225,10 +240,7 @@ Update `site` in `astro.config.mjs` and `url` in `src/data/site.ts` if the domai
 - **`npm audit` reports two moderate advisories in `fflate`**, pulled in by satori, which renders social
   images at build time only. Nothing reaches the browser (`npm audit --omit=dev` is clean) and the affected
   function (unzipping malformed archives) is never called with outside input.
-- **Web fonts are inlined into the stylesheet** (`src/styles/fonts.css`, 65.6 KB gzip for the five font
-  payloads, cached with it). Tests reproduced linked fonts arriving after the first frame in WebKit:
-  `font-display: swap` can change visible text and `optional` can briefly make it invisible. Inlining and
-  starting font decoding before text layout remove separate font downloads; first-frame geometry is checked
-  by the navigation tests. Physical iPhone behavior still needs verification. Fallbacks in `tokens.css` are
-  matched per weight. A history-position fallback corrects rebuilt homepages after parsing if native
-  restoration is clamped to incomplete content; no page visibility guard is used.
+- **Web fonts are inlined into the stylesheet** (`src/styles/fonts.css`, ~65.6 KB gzip, cached with it).
+  This resolved navigation font swaps on the user's iPhone. Tests check all five font faces at the first
+  styled frame; physical-device review still matters. The fallbacks in `tokens.css` stay metric-matched per
+  weight for the first, cold visit.

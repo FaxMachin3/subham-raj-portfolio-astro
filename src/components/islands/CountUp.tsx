@@ -19,6 +19,7 @@ export default function CountUp({ text }: { text: string }) {
     const target = Number(match[1]);
     const decimals = match[2]?.length ?? 0;
     const suffix = match[3]!;
+    // Timed from the first animation frame, so a busy main thread doesn't skip the start of the count.
     let start: number | undefined;
     let frame = 0;
     const tick = (now: number) => {

@@ -50,7 +50,7 @@ export function useFixLifecycle(id: FixId, handlers: FixHandlers): void {
       .catch((error: unknown) => {
         if (controller.signal.aborted) return;
         console.error(`[fix:${id}]`, error);
-        $statuses.setKey(id, 'healthy');
+        $statuses.setKey(id, 'failed');
       });
 
     return () => controller.abort();

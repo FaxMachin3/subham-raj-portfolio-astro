@@ -2,9 +2,9 @@ import { useState } from 'react';
 import FixCard from '../FixCard';
 import { useFixLifecycle } from '@/fixes/useFixLifecycle';
 import { addJsBytes } from '@/stores/fixes';
-import { recordRequest } from '@/lab/requests';
+import { importCounted } from '@/lab/requests';
 import { formatKB } from '@/lab/format';
-import { bundleMeasurement, chunkBytes } from '@/lab/resources';
+import { bundleMeasurement, chunkBytes, resourceEntries } from '@/lab/resources';
 
 type DemoModule = { size(): number };
 const routeLoaders = import.meta.glob<DemoModule>('../../../demos/routes/*.ts');
@@ -25,35 +25,42 @@ const initialRows = (): Record<string, Row> =>
     ['core', ...ROUTES.map((r) => r.name)].map((n) => [n, { state: 'idle' as RowState, bytes: null }]),
   );
 
-export default function BundleFix({ productionNote }: { productionNote: string }) {
+export default function BundleFix({ productionNote, method }: { productionNote: string; method?: string }) {
   const [rows, setRows] = useState(initialRows);
   const [mode, setMode] = useState<'broken' | 'fixed' | null>(null);
 
+  /** Loads one chunk; its size is the decoded script size, also reported when it came from memory. */
   const load = async (name: string, loader: () => Promise<DemoModule>, state: RowState) => {
-    recordRequest();
-    const mod = await loader();
+    const { result: mod, fetched } = await importCounted(name, loader);
     mod.size(); // keep the module honest: its payload is actually used
-    const bytes = chunkBytes(name, performance.getEntriesByType('resource') as PerformanceResourceTiming[]);
-    if (bytes) addJsBytes(bytes);
+    const bytes = chunkBytes(name, resourceEntries());
+    if (bytes && fetched) addJsBytes(bytes);
     setRows((prev) => ({ ...prev, [name]: { state, bytes } }));
-    return bytes;
+    return { bytes, fetched };
   };
+
+  // Short on purpose: the result line has a reserved height, so the card never shifts the page.
+  const describe = (loads: readonly { fetched: boolean }[], what: string) =>
+    loads.some((l) => l.fetched) ? what : `${what} · from memory`;
 
   useFixLifecycle('bundle', {
     async break() {
       setMode('broken');
       setRows(initialRows());
-      const sizes = await Promise.all([
+      const loads = await Promise.all([
         load('core', loadCore, 'eager'),
         ...ROUTES.map((r) => load(r.name, r.load, 'eager')),
       ]);
-      return bundleMeasurement(sizes, `${sizes.length} scripts before anything works`);
+      return bundleMeasurement(
+        loads.map((l) => l.bytes),
+        describe(loads, `${loads.length} scripts before anything works`),
+      );
     },
     async fix() {
       setMode('fixed');
       setRows(initialRows());
       const core = await load('core', loadCore, 'eager');
-      return bundleMeasurement([core], 'core only · each route loads on first visit');
+      return bundleMeasurement([core.bytes], describe([core], 'core only · each route loads on first visit'));
     },
   });
 
@@ -62,11 +69,12 @@ export default function BundleFix({ productionNote }: { productionNote: string }
   return (
     <FixCard
       id="bundle"
+      method={method}
       number="03"
       area="loading"
       title="Every route, shipped up front"
       description="Broken: all route code loads before anything works. Fixed: only the core loads; each route’s code loads the first time you open it."
-      measureLabel={{ before: 'JS on load', after: 'JS on load' }}
+      measureLabel={{ before: 'JS needed to start', after: 'JS needed to start' }}
       productionNote={productionNote}
     >
       <div className="waterfall" role="list" aria-label="Scripts loaded">

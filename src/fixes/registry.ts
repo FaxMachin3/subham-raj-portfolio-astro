@@ -20,14 +20,26 @@ export const FIX_META: Record<FixId, FixMeta> = {
     commit: 'perf(sidebar): defer work until the transition ends',
     motion: true,
   },
-  bundle: { label: 'Bundle size', commit: 'perf(load): split routes, load on demand', motion: false },
+  bundle: {
+    label: 'Bundle size',
+    commit: 'perf(load): split routes, load on demand',
+    motion: false,
+  },
   network: {
     label: 'Network requests',
     commit: 'perf(network): fetch on scroll, back off polling',
     motion: true,
   },
-  a11y: { label: 'Accessibility', commit: 'a11y(panel): semantics, labels, focus, contrast', motion: false },
-  i18n: { label: 'Translations', commit: 'i18n: typed keys, lazy cached translations', motion: false },
+  a11y: {
+    label: 'Accessibility',
+    commit: 'a11y(panel): semantics, labels, focus, contrast',
+    motion: false,
+  },
+  i18n: {
+    label: 'Translations',
+    commit: 'i18n: typed keys, lazy cached translations',
+    motion: false,
+  },
 };
 
 /**
