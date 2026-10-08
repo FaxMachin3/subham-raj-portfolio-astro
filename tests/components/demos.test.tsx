@@ -225,6 +225,7 @@ describe('JankFix', () => {
     vi.spyOn(idle, 'runWhenIdle').mockResolvedValue();
     $targets.setKey('jank', null);
     $statuses.setKey('jank', 'healthy');
+    $results.setKey('jank', {});
     render(<JankFix productionNote="note" />);
     await act(async () => screen.getByRole('button', { name: 'Toggle sidebar' }).click());
     act(() => requestTarget('jank', 'broken'));
@@ -234,19 +235,27 @@ describe('JankFix', () => {
     expect(record).toHaveBeenCalledTimes(1);
     expect(busy).not.toHaveBeenCalled();
     expect($statuses.get().jank).toBe('cancelled');
+    expect($results.get().jank.before).toBeUndefined();
     vi.useRealTimers();
   });
 
   it('runs the deferred work exactly once when transitionend never fires, and not again if it fires late', async () => {
+    vi.useFakeTimers();
+    vi.spyOn(frames, 'recordFrames').mockResolvedValue([0, 16, 32, 48, 64, 80]);
     const run = vi.spyOn(idle, 'runWhenIdle').mockResolvedValue();
+    $targets.setKey('jank', null);
+    $statuses.setKey('jank', 'healthy');
     const { container } = render(<JankFix productionNote="note" />);
     act(() => requestTarget('jank', 'fixed'));
-    await vi.waitFor(() => expect(run).toHaveBeenCalledTimes(1), { timeout: 5000 });
+    await act(async () => vi.advanceTimersByTimeAsync(590));
+    expect(run).not.toHaveBeenCalled();
+    await act(async () => vi.advanceTimersByTimeAsync(10));
+    expect(run).toHaveBeenCalledTimes(1);
     expect(run).toHaveBeenCalledWith(350, 4, expect.any(AbortSignal));
     act(() => {
       container.querySelector('.jank-app__side')!.dispatchEvent(new Event('transitionend'));
     });
-    await vi.waitFor(() => expect($statuses.get().jank).toBe('fixed'), { timeout: 5000 });
+    expect($statuses.get().jank).toBe('fixed');
     expect(run).toHaveBeenCalledTimes(1);
   });
 
@@ -265,6 +274,14 @@ describe('JankFix', () => {
   });
 
   it('disables "Toggle sidebar" while a measurement runs', async () => {
+    let finish: ((timestamps: number[]) => void) | undefined;
+    vi.spyOn(frames, 'recordFrames').mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    );
+    vi.spyOn(idle, 'busyWait').mockImplementation(() => {});
     $targets.setKey('jank', null);
     $statuses.setKey('jank', 'healthy');
     render(<JankFix productionNote="note" />);
@@ -272,7 +289,9 @@ describe('JankFix', () => {
     expect(toggle.disabled).toBe(false);
     act(() => requestTarget('jank', 'broken'));
     expect(toggle.disabled).toBe(true);
-    await vi.waitFor(() => expect($statuses.get().jank).toBe('broken'), { timeout: 5000 });
+    await vi.waitFor(() => expect(finish).toBeDefined());
+    await act(async () => finish!([0, 16, 32, 48, 64, 80]));
+    expect($statuses.get().jank).toBe('broken');
     expect(toggle.disabled).toBe(false);
   });
 });

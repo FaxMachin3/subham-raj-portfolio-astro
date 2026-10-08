@@ -5,37 +5,128 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  CI: true
+  ASTRO_TELEMETRY_DISABLED: '1'
+
 jobs:
-  verify:
+  checks:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
-
       - run: npm ci
+      - run: npm run i18n:check
+      - run: npm run check
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm test
+      - run: npm run build
+      - run: npm run budget
+      - uses: actions/upload-artifact@v4
+        with:
+          name: production-build
+          path: dist
+          retention-days: 1
 
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium webkit firefox
-
-      - run: npm run verify
-        env:
-          CI: true
-
-      - name: Upload Playwright report
-        if: failure()
+  browsers:
+    needs: checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - project: chromium-desktop
+            browser: chromium
+          - project: chromium-laptop
+            browser: chromium
+          - project: android-pixel-7
+            browser: chromium
+          - project: android-small-360
+            browser: chromium
+          - project: webkit-iphone-se
+            browser: webkit
+          - project: webkit-iphone-14
+            browser: webkit
+          - project: webkit-iphone-landscape
+            browser: webkit
+          - project: webkit-ipad
+            browser: webkit
+          - project: webkit-desktop
+            browser: webkit
+          - project: firefox-desktop
+            browser: firefox
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          name: production-build
+          path: dist
+      - name: Install test browser
+        run: npx playwright install --with-deps ${{ matrix.browser }}
+      - name: Test the production build
+        run: npx playwright test --project=${{ matrix.project }} --workers=2
+      - name: Upload browser diagnostics
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
-          path: playwright-report
+          name: playwright-${{ matrix.project }}
+          path: |
+            playwright-report
+            test-results
+          retention-days: 7
+
+  # Keep "verify" as the aggregate status for existing branch protection.
+  verify:
+    needs: [checks, browsers]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require source and browser checks to pass
+        env:
+          CHECKS: ${{ needs.checks.result }}
+          BROWSERS: ${{ needs.browsers.result }}
+        run: test "$CHECKS" = success && test "$BROWSERS" = success
+
+  # Fast Linux/WebKit feedback while the complete matrix runs.
+  navigation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npx playwright install --with-deps webkit
+      - run: npx playwright test tests/e2e/font-stability.spec.ts --project=webkit-iphone-14 --workers=1 --retries=0
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: navigation-diagnostics
+          path: |
+            playwright-report
+            test-results
           retention-days: 7
 
   coverage:
@@ -43,21 +134,14 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
-
       - run: npm ci
-
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
-
       - run: npm run coverage
-        env:
-          CI: true
-
       - name: Upload coverage report
         if: always()
         uses: actions/upload-artifact@v4

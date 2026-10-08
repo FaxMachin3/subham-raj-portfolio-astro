@@ -82,7 +82,6 @@ export default function JankFix({ productionNote, method }: { productionNote: st
       setOpen(false);
       await new Promise((r) => setTimeout(r, TRANSITION_MS + 150));
     }
-    if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
     const { dropped, longestMs, frameMs, enough } = await toggle(signal);
     return {
       value: dropped,

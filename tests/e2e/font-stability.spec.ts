@@ -12,8 +12,9 @@ for (const action of ['browser Back', 'return link']) {
     });
     await page.addInitScript(() => {
       addEventListener('unload', () => {});
-      const state = window as unknown as { __textFrames: string[] };
+      const state = window as unknown as { __textFrames: string[]; __fontDiagnostics: unknown[] };
       state.__textFrames = [];
+      state.__fontDiagnostics = [];
       const sample = () => {
         const heading = document.querySelector('h1');
         if (
@@ -28,7 +29,20 @@ for (const action of ['browser Back', 'return link']) {
             Math.round(rect.width * 10),
             Math.round(rect.height * 10),
           ]);
-          state.__textFrames.push(JSON.stringify(rects));
+          const signature = JSON.stringify(rects);
+          if (signature !== state.__textFrames.at(-1)) {
+            state.__fontDiagnostics.push({
+              signature,
+              readyState: document.readyState,
+              viewport: [innerWidth, document.documentElement.clientWidth],
+              fonts: [...document.fonts].map((face) => ({
+                family: face.family,
+                weight: face.weight,
+                status: face.status,
+              })),
+            });
+          }
+          state.__textFrames.push(signature);
         }
         requestAnimationFrame(sample);
       };
@@ -47,7 +61,13 @@ for (const action of ['browser Back', 'return link']) {
         () => (window as unknown as { __textFrames: string[] }).__textFrames,
       );
       expect(frames.length).toBeGreaterThan(0);
-      expect(new Set(frames).size, 'visible heading geometry stays stable as fonts finish').toBe(1);
+      const diagnostics = await page.evaluate(
+        () => (window as unknown as { __fontDiagnostics: unknown[] }).__fontDiagnostics,
+      );
+      expect(
+        new Set(frames).size,
+        `visible heading geometry stays stable on ${new URL(page.url()).pathname}: ${JSON.stringify(diagnostics)}`,
+      ).toBe(1);
     };
 
     await page.goto('/', { waitUntil: 'domcontentloaded' });
