@@ -6,6 +6,7 @@ import BundleFix from '@/components/islands/fixes/BundleFix';
 import I18nFix from '@/components/islands/fixes/I18nFix';
 import JankFix from '@/components/islands/fixes/JankFix';
 import * as idle from '@/lab/idle';
+import * as frames from '@/lab/frames';
 import * as plot from '@/lab/plot';
 import * as requests from '@/lab/requests';
 import { $results, $statuses, $targets, requestTarget } from '@/stores/fixes';
@@ -138,6 +139,23 @@ describe('PlotFix under reduced motion and aborts', () => {
 });
 
 describe('manual sidebar cancellation', () => {
+  it('reports an unexpected measurement failure and allows another toggle to succeed', async () => {
+    vi.useFakeTimers();
+    vi.spyOn(idle, 'runWhenIdle').mockResolvedValue(undefined);
+    const recording = vi.spyOn(frames, 'recordFrames');
+    recording.mockRejectedValueOnce(new Error('frame recording failed'));
+    render(<JankFix productionNote="note" />);
+    const toggle = screen.getByRole<HTMLButtonElement>('button', { name: 'Toggle sidebar' });
+    await act(async () => toggle.click());
+    expect(screen.getByText('Sidebar measurement failed · try again')).toBeTruthy();
+    expect(toggle.disabled).toBe(false);
+    act(() => toggle.click());
+    await act(async () => vi.advanceTimersByTimeAsync(2000));
+    expect(recording).toHaveBeenCalledTimes(2);
+    expect(screen.getByText(/Last run:/)).toBeTruthy();
+    expect(screen.queryByText(/measurement failed/)).toBeNull();
+  });
+
   it('can replace a manual toggle without an unhandled abort rejection', async () => {
     vi.useFakeTimers();
     vi.spyOn(idle, 'runWhenIdle').mockResolvedValue(undefined);

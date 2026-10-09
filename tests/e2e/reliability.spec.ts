@@ -2,6 +2,43 @@ import { expect, test } from './fixtures';
 import { expectNoHorizontalOverflow, tap, waitForDemos } from './helpers';
 
 test.describe('failure and recovery', () => {
+  test('a failed route without Resource Timing stays usable and recovers after a reload', async ({
+    page,
+  }) => {
+    // Some browsers expose no Resource Timing metadata. The loader must handle the missing URL
+    // without throwing another error or marking the rejected native import as loaded.
+    await page.addInitScript(() => {
+      const getEntries = performance.getEntriesByType.bind(performance);
+      performance.getEntriesByType = (type) => (type === 'resource' ? [] : getEntries(type));
+      Object.defineProperty(PerformanceObserver, 'supportedEntryTypes', {
+        value: PerformanceObserver.supportedEntryTypes.filter((type) => type !== 'resource'),
+      });
+    });
+    await page.route('**/graph.*.js*', (route) => route.abort());
+    await page.goto('/');
+    await waitForDemos(page);
+    const card = page.getByTestId('fix-bundle');
+    const fix = async () => {
+      await card.getByRole('button', { name: 'Fix', exact: true }).click();
+      await card.getByRole('button', { name: /Skip/ }).click();
+    };
+    await fix();
+    await card.getByRole('button', { name: 'Open graph', exact: true }).click();
+    const retry = card.getByRole('button', { name: 'Retry graph · failed', exact: true });
+    await expect(retry).toBeEnabled();
+    await retry.click();
+    await expect(retry).toBeEnabled();
+    await expect(card.getByRole('button', { name: /^graph ·/ })).toHaveCount(0);
+    await expect(card.getByRole('button', { name: 'Open search', exact: true })).toBeEnabled();
+    // A rejected native import may remain cached without an observed URL to cache-bust.
+    await page.unroute('**/graph.*.js*');
+    await page.reload();
+    await waitForDemos(page);
+    await fix();
+    await card.getByRole('button', { name: 'Open graph', exact: true }).click();
+    await expect(card.getByRole('button', { name: /^graph ·/ })).toBeDisabled();
+  });
+
   test('a failed route import retries with a fresh URL and then reuses the recovered module', async ({
     page,
   }) => {
