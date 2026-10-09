@@ -23,14 +23,31 @@ describe('frames', () => {
     vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) =>
       setTimeout(() => cb((now += 16)), 0),
     );
+    vi.stubGlobal('cancelAnimationFrame', clearTimeout);
     vi.spyOn(performance, 'now').mockImplementation(() => now);
     expect(await recordFrames(50)).toEqual([16, 32, 48, 64]);
 
     const controller = new AbortController();
     now = 0;
     const stopped = recordFrames(10_000, controller.signal);
+    await new Promise((r) => setTimeout(r, 0));
     controller.abort();
     expect((await stopped).length).toBe(1);
+    expect(await recordFrames(10_000, controller.signal)).toEqual([]);
+  });
+
+  it('settles on abort even when no animation frame ever runs (a background tab)', async () => {
+    const cancel = vi.fn();
+    vi.stubGlobal('requestAnimationFrame', () => 42);
+    vi.stubGlobal('cancelAnimationFrame', cancel);
+    const controller = new AbortController();
+    const recording = recordFrames(10_000, controller.signal);
+    const painted = afterNextPaint(controller.signal);
+    controller.abort();
+    expect(await recording).toEqual([]);
+    await expect(painted).resolves.toBeUndefined();
+    expect(cancel).toHaveBeenCalledWith(42);
+    await expect(afterNextPaint(controller.signal)).resolves.toBeUndefined();
   });
 
   it('resolves after two frames, so changes have painted', async () => {
@@ -72,6 +89,20 @@ describe('idle scheduling', () => {
     const controller = new AbortController();
     controller.abort();
     await expect(runWhenIdle(1000, 4, controller.signal)).resolves.toBeUndefined();
+  });
+
+  it('stops waiting for idle time as soon as it is aborted', async () => {
+    const cancel = vi.fn();
+    vi.stubGlobal(
+      'requestIdleCallback',
+      vi.fn(() => 9),
+    );
+    vi.stubGlobal('cancelIdleCallback', cancel);
+    const controller = new AbortController();
+    const run = runWhenIdle(1000, 4, controller.signal);
+    controller.abort();
+    await expect(run).resolves.toBeUndefined();
+    expect(cancel).toHaveBeenCalledWith(9);
   });
 });
 

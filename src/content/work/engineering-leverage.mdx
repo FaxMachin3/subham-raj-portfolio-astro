@@ -20,8 +20,8 @@ more of the codebase. Speed is only an advantage if the mistakes it creates are 
 
 Backend response shapes could change without a matching frontend change, and the mismatch surfaced in
 production. I wrote a script that generates types from our OpenAPI spec and runs in a pre-commit hook when
-backend code changes, with CI checks as well. A breaking change now fails type checks **in the backend PR
-itself**, where the backend engineer can coordinate the frontend fix before anything ships.
+backend code changes, with CI checks as well. A breaking change that the generated types can detect now fails
+type checks **in the backend PR itself**, where the backend engineer can coordinate the frontend fix before anything ships.
 
 It is compile-time safety only; runtime validation and contract tests are the natural next step.
 

@@ -45,10 +45,11 @@ const ogAlt = title ?? site.title;
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light dark" />
     <script is:inline>
+      document.documentElement.dataset.hud = 'collapsed';
       try {
         const theme = localStorage.getItem('theme');
         if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme;
-        if (localStorage.getItem('hud') === 'collapsed') document.documentElement.dataset.hud = 'collapsed';
+        if (localStorage.getItem('hud') === 'expanded') delete document.documentElement.dataset.hud;
       } catch {}
     </script>
     <style is:inline>
@@ -168,6 +169,13 @@ const ogAlt = title ?? site.title;
         },
         { once: true },
       );
+      // Going back to the homepage is the shorter, closing transition (global.css reads data-vt-dir).
+      addEventListener('pagereveal', (e) => {
+        if (!e.viewTransition) return;
+        const root = document.documentElement;
+        root.dataset.vtDir = location.pathname === '/' ? 'return' : 'open';
+        e.viewTransition.finished.finally(() => delete root.dataset.vtDir);
+      });
       // Smooth scrolling starts once the page (and any jump to its #fragment) has loaded; see global.css.
       addEventListener(
         'load',

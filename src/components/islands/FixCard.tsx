@@ -1,7 +1,7 @@
 import { lazy, Suspense, type ReactNode } from 'react';
 import { useStore } from '@nanostores/react';
 import { $xray } from '@/xray/store';
-import { $results, $statuses, requestTarget } from '@/stores/fixes';
+import { $results, $runActive, $statuses, requestTarget } from '@/stores/fixes';
 import { FIX_META } from '@/fixes/registry';
 import type { FixId, FixStatus, Measurement } from '@/fixes/types';
 import { useReducedMotion } from '@/lib/useReducedMotion';
@@ -75,7 +75,9 @@ export default function FixCard({
   const result = useStore($results, { keys: [id] })[id];
   const xray = useStore($xray, { keys: [id] })[id];
   const reducedMotion = useReducedMotion();
-  const busy = status === 'breaking' || status === 'fixing';
+  const runActive = useStore($runActive);
+  // A whole-site run owns every card until it ends: a manual change mid-run could leave it merged but broken.
+  const busy = status === 'breaking' || status === 'fixing' || runActive;
   const breakBlocked = reducedMotion && FIX_META[id].motion;
   const titleId = `fix-${id}-title`;
 

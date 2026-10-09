@@ -2,6 +2,31 @@ import { expect, test } from './fixtures';
 import { expectNoHorizontalOverflow, tap, waitForDemos } from './helpers';
 
 test.describe('failure and recovery', () => {
+  test('a failed route import retries with a fresh URL and then reuses the recovered module', async ({
+    page,
+  }) => {
+    let requests = 0;
+    await page.route('**/graph.*.js*', async (route) => {
+      requests++;
+      if (requests <= 2) await route.abort();
+      else await route.continue();
+    });
+    await page.goto('/');
+    await waitForDemos(page);
+    const card = page.getByTestId('fix-bundle');
+    await card.getByRole('button', { name: 'Fix', exact: true }).click();
+    await card.getByRole('button', { name: /Skip/ }).click();
+    await card.getByRole('button', { name: 'Open graph', exact: true }).click();
+    await card.getByRole('button', { name: 'Retry graph · failed', exact: true }).click();
+    await card.getByRole('button', { name: 'Retry graph · failed', exact: true }).click();
+    await expect(card.getByRole('button', { name: /^graph ·/ })).toBeDisabled();
+    expect(requests).toBe(3);
+    await card.getByRole('button', { name: 'Fix', exact: true }).click();
+    await card.getByRole('button', { name: /Skip/ }).click();
+    await card.getByRole('button', { name: 'Open graph', exact: true }).click();
+    await expect(card.getByRole('button', { name: /^graph ·/ })).toBeDisabled();
+    expect(requests).toBe(3);
+  });
   test('a demo that fails ends the whole-site run with a clear message and usable controls', async ({
     page,
     isMobile,
@@ -80,6 +105,25 @@ test.describe('failure and recovery', () => {
   });
 });
 
+test.describe('whole-site runs', () => {
+  test('lock every card while they run, and Cancel hands everything back', async ({ page, isMobile }) => {
+    test.skip(
+      await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches),
+      'breaking is off under reduced motion',
+    );
+    await page.goto('/');
+    await waitForDemos(page);
+    const cardFix = page.getByTestId('fix-i18n').getByRole('button', { name: 'Fix', exact: true });
+    await tap(isMobile)(page.getByRole('button', { name: 'Break this site' }));
+    await expect(cardFix).toBeDisabled();
+    await tap(isMobile)(page.getByRole('button', { name: 'Cancel run' }));
+    await expect(page.locator('.toast--visible')).toContainText('Run cancelled.');
+    await expect(cardFix).toBeEnabled();
+    await expect(page.getByRole('button', { name: 'Break this site' })).toBeEnabled();
+    await expect(page.getByTestId('pr-badge')).not.toHaveText('Merged');
+  });
+});
+
 test.describe('honest counting', () => {
   test('a translation already in memory is not counted as a download', async ({ page, isMobile }) => {
     await page.goto('/');
@@ -101,7 +145,7 @@ test.describe('hiring structure', () => {
   test('selected work comes before the interactive lab, and the hero leads with it', async ({ page }) => {
     await page.goto('/');
     const order = await page.evaluate(() =>
-      ['work', 'fixes', 'leverage', 'experience', 'contact'].map(
+      ['work', 'leverage', 'fixes', 'results', 'experience', 'contact'].map(
         (id) => document.getElementById(id)!.offsetTop,
       ),
     );
@@ -112,6 +156,16 @@ test.describe('hiring structure', () => {
       '/resume',
     );
     await expect(page.getByText('From my production work at TRM Labs')).toBeVisible();
+    await expect(
+      page.locator('.hero').getByRole('link', { name: 'Explore the interactive lab ↓' }),
+    ).toHaveAttribute('href', '#fixes');
+    // The lab's controls sit directly above the cards they break and fix.
+    const [controls, firstCard] = await Promise.all([
+      page.getByRole('button', { name: 'Break this site' }).boundingBox(),
+      page.getByTestId('fix-plot').boundingBox(),
+    ]);
+    expect(controls!.y).toBeLessThan(firstCard!.y);
+    expect(firstCard!.y - controls!.y).toBeLessThan(800);
   });
 
   test('every demo explains how it measures, and says the TRM note is historical', async ({ page }) => {
@@ -124,15 +178,21 @@ test.describe('hiring structure', () => {
     }
   });
 
-  test('the health bar collapses, stays collapsed after a reload, and never covers content', async ({
+  test('the health bar starts collapsed, remembers being opened or closed, and never covers content', async ({
     page,
   }) => {
     await page.goto('/');
     await waitForDemos(page);
-    await page.getByRole('button', { name: 'Hide page health' }).click();
-    await expect(page.locator('#hud-cells')).toBeHidden();
-    await page.reload();
     await expect(page.locator('html')).toHaveAttribute('data-hud', 'collapsed');
+    await expect(page.locator('#hud-cells')).toBeHidden();
+    await page.getByRole('button', { name: 'Show page health' }).click();
+    await expect(page.locator('#hud-cells')).toBeVisible();
+    await page.reload();
+    await waitForDemos(page);
+    await expect(page.locator('html')).not.toHaveAttribute('data-hud', 'collapsed');
+    await expect(page.locator('#hud-cells')).toBeVisible();
+    await page.getByRole('button', { name: 'Hide page health' }).click();
+    await page.reload();
     await expect(page.locator('#hud-cells')).toBeHidden();
     await expect(page.getByRole('button', { name: 'Show page health' })).toBeVisible();
   });

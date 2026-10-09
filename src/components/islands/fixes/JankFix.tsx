@@ -66,6 +66,7 @@ export default function JankFix({ productionNote, method }: { productionNote: st
       );
     }
     const report = analyzeFrames(await frames);
+    signal?.throwIfAborted();
     setLastRun(
       report.enough
         ? `Last run: ~${report.dropped} dropped frames, longest frame ${Math.round(report.longestMs)} ms`
@@ -122,7 +123,9 @@ export default function JankFix({ productionNote, method }: { productionNote: st
             manualRun.current?.abort();
             const controller = new AbortController();
             manualRun.current = controller;
-            void toggle(controller.signal);
+            void toggle(controller.signal).catch(() => {
+              if (!controller.signal.aborted) setLastRun('Sidebar measurement failed · try again');
+            });
           }}
         >
           Toggle sidebar

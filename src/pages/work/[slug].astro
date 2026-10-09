@@ -44,29 +44,39 @@ const graph = articleGraph({
       ← All case studies
     </a>
     <header class="study__head">
-      <p class="eyebrow">
-        {study.data.company} · {study.data.period}
-      </p>
-      <h1 style={`view-transition-name: study-${study.id}; view-transition-class: study-title`}>
-        {study.data.title}
-      </h1>
-      <p class="study__summary">{study.data.summary}</p>
-      <dl class="study__facts">
-        <div>
-          <dt>Role</dt>
-          <dd>{study.data.role}</dd>
-        </div>
-        <div>
-          <dt>Stack</dt>
-          <dd>{study.data.stack.join(', ')}</dd>
-        </div>
-        {headlines.map((m) => (
+      <span
+        class="study__surface"
+        aria-hidden="true"
+        style={`view-transition-name: surface-${study.id}; view-transition-class: study-surface`}
+      />
+      <div
+        class="study__body"
+        style={`view-transition-name: body-${study.id}; view-transition-class: study-body`}
+      >
+        <p class="eyebrow">
+          {study.data.company} · {study.data.period}
+        </p>
+        <h1 style={`view-transition-name: study-${study.id}; view-transition-class: study-title`}>
+          {study.data.title}
+        </h1>
+        <p class="study__summary">{study.data.summary}</p>
+        <dl class="study__facts">
           <div>
-            <dt>{m.label}</dt>
-            <dd class="study__metric">{unbreakable(m.value)}</dd>
+            <dt>Role</dt>
+            <dd>{study.data.role}</dd>
           </div>
-        ))}
-      </dl>
+          <div>
+            <dt>Stack</dt>
+            <dd>{study.data.stack.join(', ')}</dd>
+          </div>
+          {headlines.map((m) => (
+            <div>
+              <dt>{m.label}</dt>
+              <dd class="study__metric">{unbreakable(m.value)}</dd>
+            </div>
+          ))}
+        </dl>
+      </div>
     </header>
     <div class="prose">
       <Content />
@@ -102,6 +112,24 @@ const graph = articleGraph({
     text-decoration: none;
   }
 
+  /* The case-study card, opened: the homepage card's surface grows into this on navigation. */
+  .study__head {
+    position: relative;
+    isolation: isolate;
+    margin-block: var(--space-4) var(--space-8);
+    padding: clamp(1.25rem, 4vw, 2.25rem);
+    border-radius: var(--radius-lg);
+  }
+
+  .study__surface {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border: 1px solid var(--color-line);
+    border-radius: inherit;
+    background: var(--color-surface);
+  }
+
   .study__head h1 {
     margin: 0 0 var(--space-4);
     font-size: clamp(2rem, 1.4rem + 3vw, 3.2rem);
@@ -117,14 +145,14 @@ const graph = articleGraph({
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr));
     gap: var(--space-3);
-    margin: 0 0 var(--space-8);
+    margin: 0;
   }
 
   .study__facts div {
     padding: var(--space-3) var(--space-4);
     border: 1px solid var(--color-line);
     border-radius: var(--radius-md);
-    background: var(--color-surface);
+    background: var(--color-paper);
   }
 
   .study__facts dt {

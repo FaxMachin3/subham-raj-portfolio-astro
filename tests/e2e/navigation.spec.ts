@@ -79,6 +79,20 @@ test.describe('page transitions', () => {
     });
   }
 
+  test('coming back puts keyboard focus on the card that was opened', async ({ page, isMobile }) => {
+    test.skip(isMobile, 'keyboard navigation is a desktop concern');
+    await page.goto('/');
+    await page.waitForLoadState('load');
+    const card = page.locator('#work a.study').nth(1);
+    await card.focus();
+    await page.keyboard.press('Enter');
+    await expect(page).toHaveURL(/\/work\//);
+    await page.waitForLoadState('load');
+    await page.goBack();
+    await expect(page).toHaveURL(/\/$/);
+    await expect(card).toBeFocused();
+  });
+
   test('"← All case studies" stays a normal link to /#work when the page was not opened from home', async ({
     page,
   }) => {

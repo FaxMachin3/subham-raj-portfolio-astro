@@ -56,7 +56,7 @@ const HUD_KEY = 'hud';
 
 /**
  * Live page health. Every value is measured in this tab: nothing is shown until there is a real sample,
- * and unsupported metrics say "n/a". It can be collapsed so it never covers content.
+ * and unsupported metrics say "n/a". It starts collapsed, so it never covers content until asked for.
  */
 export default function HealthBar() {
   const hydrated = useHydrated();
@@ -65,8 +65,9 @@ export default function HealthBar() {
   const [fps, setFps] = useState<number | null>(null);
   const [reqLastMinute, setReqLastMinute] = useState(0);
   // The head script applies a saved preference before first paint; once hydrated, read it from <html>.
+  // Server HTML matches the default: collapsed.
   const [choice, setChoice] = useState<boolean | null>(null);
-  const collapsed = choice ?? (hydrated && document.documentElement.dataset.hud === 'collapsed');
+  const collapsed = choice ?? (!hydrated || document.documentElement.dataset.hud === 'collapsed');
 
   const toggle = () => {
     const next = !collapsed;
@@ -74,8 +75,7 @@ export default function HealthBar() {
     if (next) document.documentElement.dataset.hud = 'collapsed';
     else delete document.documentElement.dataset.hud;
     try {
-      if (next) localStorage.setItem(HUD_KEY, 'collapsed');
-      else localStorage.removeItem(HUD_KEY);
+      localStorage.setItem(HUD_KEY, next ? 'collapsed' : 'expanded');
     } catch {
       // Storage unavailable: the choice lasts for this page view.
     }

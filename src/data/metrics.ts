@@ -66,7 +66,7 @@ export const metrics = {
   },
   designSystemAdoption: {
     value: 'All new UI',
-    label: 'built on the design system he proposed',
+    label: 'built on the design system I proposed',
     source: 'production',
     approved: true,
     evidence: 'TRM experience record',

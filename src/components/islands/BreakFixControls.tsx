@@ -3,6 +3,7 @@ import { useStore } from '@nanostores/react';
 import {
   $prState,
   $ready,
+  $runActive,
   $statuses,
   allReady,
   cancelInProgress,
@@ -39,6 +40,16 @@ interface Progress {
 /** Anything short of healthy or fixed: a failed or cancelled run still needs fixing. */
 const isBroken = (status: FixStatus) => status !== 'healthy' && status !== 'fixed';
 
+const STATUS_WORD: Record<FixStatus, string> = {
+  healthy: 'healthy',
+  breaking: 'breaking',
+  broken: 'broken',
+  fixing: 'fixing',
+  fixed: 'fixed',
+  failed: 'failed',
+  cancelled: 'cancelled',
+};
+
 export default function BreakFixControls() {
   const hydrated = useHydrated();
   const ready = allReady(useStore($ready)) && hydrated;
@@ -52,6 +63,7 @@ export default function BreakFixControls() {
   const toastTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   // The current whole-site run. Aborting it stops the controller waiting; cards are cancelled separately.
   const runRef = useRef<AbortController | null>(null);
+  const runIdRef = useRef(0);
 
   const notify = (title: string, body?: string, tone: Toast['tone'] = 'info', holdMs = 5200) => {
     setToast({ title, body, tone });
@@ -90,34 +102,54 @@ export default function BreakFixControls() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wordKey]);
 
-  // Only one run at a time: both buttons are disabled while one is active.
+  // Only one run at a time: both buttons, and every card's own buttons, are disabled while one is active.
   const beginRun = () => {
+    runIdRef.current++;
     runRef.current = new AbortController();
+    $runActive.set(true);
     return runRef.current.signal;
+  };
+
+  const endRun = () => {
+    runRef.current = null;
+    $runActive.set(false);
+  };
+
+  /** Stops the run and every card still changing; finished cards keep their state. */
+  const stopRun = () => {
+    cancelInProgress();
+    if (!runRef.current) return;
+    runRef.current.abort();
+    endRun();
+    setPhase('idle');
+  };
+
+  // Only offered while a run is active.
+  const cancelRun = () => {
+    stopRun();
+    notify('Run cancelled.', 'Demos that were mid-change show Cancelled. Start again any time.', 'warn');
   };
 
   /** Leaving the page (or unmounting) abandons the run: obsolete work stops instead of finishing unseen. */
   useEffect(() => {
     const abandon = () => {
       clearTimeout(toastTimer.current);
-      cancelInProgress();
-      if (!runRef.current) return;
-      runRef.current.abort();
-      runRef.current = null;
-      setPhase('idle');
+      stopRun();
     };
     addEventListener('pagehide', abandon);
     return () => {
       removeEventListener('pagehide', abandon);
       abandon();
     };
+    // stopRun only touches refs, stores and state setters, so the first render's copy stays correct.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const endRunWithFailure = (ids: readonly FixId[], action: 'break' | 'fix') => {
     for (const id of ids) step(id, 'failed');
     const names = ids.map((id) => FIX_META[id].label).join(', ');
     setPhase('idle');
-    runRef.current = null;
+    endRun();
     notify(
       action === 'break' ? 'Some demos didn’t break.' : 'A fix didn’t complete.',
       `${names}: ${action === 'break' ? 'press “Break this site”' : 'press “Let Subham fix it”'} to try again.`,
@@ -150,7 +182,7 @@ export default function BreakFixControls() {
     const failed = BREAK_ORDER.filter((_, i) => outcomes[i] !== 'broken');
     if (failed.length) return endRunWithFailure(failed, 'break');
     step('plot', 'done');
-    runRef.current = null;
+    endRun();
     setPhase('broken');
     notify(
       'Site broken. Six issues, all measured.',
@@ -161,6 +193,7 @@ export default function BreakFixControls() {
 
   const fixAll = async () => {
     const signal = beginRun();
+    const runId = runIdRef.current;
     setPhase('fixing');
     startSession();
     clearRequestLog();
@@ -179,12 +212,16 @@ export default function BreakFixControls() {
       await sleep(BETWEEN_FIXES_MS);
       if (signal.aborted) return;
     }
-    runRef.current = null;
+    // Merged only if every demo really ended fixed, whatever happened to it during the run.
+    const final = $statuses.get();
+    const unfinished = FIX_ORDER.filter((id) => final[id] !== 'fixed');
+    if (unfinished.length) return endRunWithFailure(unfinished, 'fix');
+    endRun();
     $prState.set('merged');
     setPhase('fixed');
     notify('PR #581 merged.', 'Every demo number was measured on your device.', 'info', 6000);
     await sleep(MERGED_GLOW_MS);
-    setPhase('idle');
+    if (!signal.aborted && runId === runIdRef.current) setPhase('idle');
   };
 
   const running = phase === 'breaking' || phase === 'fixing';
@@ -194,7 +231,7 @@ export default function BreakFixControls() {
   const next = !ready ? (
     <span>Loading the demos…</span>
   ) : phase === 'broken' ? (
-    <a href="#fixes">See what broke ↓</a>
+    <a href="#fix-cards">See what broke ↓</a>
   ) : pr === 'merged' && !anyBroken ? (
     <a href="#results">See your results ↓</a>
   ) : null;
@@ -215,8 +252,24 @@ export default function BreakFixControls() {
         </button>
         {/* Always rendered with a reserved height, so its message can change without shifting the page. */}
         <p className="controls__next" data-testid="controls-next">
-          {next}
+          {running ? (
+            <button type="button" className="controls__cancel" onClick={cancelRun}>
+              Cancel run
+            </button>
+          ) : (
+            next
+          )}
         </p>
+        {/* Each demo's state at a glance, next to the buttons that change it. Cards announce changes. */}
+        <ul className="controls__status" aria-label="Demo status">
+          {FIX_ORDER.map((id) => (
+            <li key={id} data-status={statuses[id]}>
+              <span className="controls__dot" aria-hidden="true" />
+              {FIX_META[id].label}
+              <span className="sr-only">: {STATUS_WORD[statuses[id]]}</span>
+            </li>
+          ))}
+        </ul>
         {reducedMotion && (
           <span className="controls__note">
             Breaking is turned off because you prefer reduced motion. Each fix and its explanation is still

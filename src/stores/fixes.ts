@@ -28,6 +28,8 @@ export const $jsBytes = atom(0);
 /** Bumped whenever a full break or fix run starts, so live meters reset. */
 export const $session = atom(0);
 export const $prState = atom<'none' | 'open' | 'merged'>('none');
+/** True while a whole-site break or fix run owns the cards; their own Break/Fix buttons are locked. */
+export const $runActive = atom(false);
 
 let nonce = 0;
 

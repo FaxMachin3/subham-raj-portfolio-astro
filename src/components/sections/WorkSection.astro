@@ -15,21 +15,31 @@ const studies = (await getCollection('work')).sort((a, b) => a.data.order - b.da
       const headline = study.data.metrics[0] ? requireMetric(study.data.metrics[0]) : undefined;
       return (
         <li data-reveal>
-          <a class="study card" href={`/work/${study.id}`}>
-            <span class="study__meta mono">
-              {study.data.company} · {study.data.role}
-            </span>
-            <h3 style={`view-transition-name: study-${study.id}; view-transition-class: study-title`}>
-              {study.data.title}
-            </h3>
-            <p>{study.data.summary}</p>
-            {headline && (
-              <span class="study__metric">
-                <strong>{unbreakable(headline.value)}</strong> {headline.label}
+          <a class="study card" href={`/work/${study.id}`} data-opener>
+            <span
+              class="study__surface"
+              aria-hidden="true"
+              style={`view-transition-name: surface-${study.id}; view-transition-class: study-surface`}
+            />
+            <span
+              class="study__body"
+              style={`view-transition-name: body-${study.id}; view-transition-class: study-body`}
+            >
+              <span class="study__meta mono">
+                {study.data.company} · {study.data.role}
               </span>
-            )}
-            <span class="study__cta" aria-hidden="true">
-              Read the case study →
+              <h3 style={`view-transition-name: study-${study.id}; view-transition-class: study-title`}>
+                {study.data.title}
+              </h3>
+              <p>{study.data.summary}</p>
+              {headline && (
+                <span class="study__metric">
+                  <strong>{unbreakable(headline.value)}</strong> {headline.label}
+                </span>
+              )}
+              <span class="study__cta" aria-hidden="true">
+                Read the case study →
+              </span>
             </span>
           </a>
         </li>
@@ -37,6 +47,13 @@ const studies = (await getCollection('work')).sort((a, b) => a.data.order - b.da
     })}
   </ul>
 </section>
+
+<script>
+  import { rememberOpener, restoreOpener } from '@/lib/return-focus';
+
+  rememberOpener();
+  restoreOpener();
+</script>
 
 <style>
   .studies {
@@ -49,7 +66,12 @@ const studies = (await getCollection('work')).sort((a, b) => a.data.order - b.da
   }
 
   .study {
+    position: relative;
+    isolation: isolate;
     display: flex;
+    /* The surface below paints the card; the border stays (transparent) so the layout is unchanged. */
+    background: transparent;
+    border-color: transparent;
     flex-direction: column;
     gap: var(--space-2);
     height: 100%;
@@ -63,6 +85,23 @@ const studies = (await getCollection('work')).sort((a, b) => a.data.order - b.da
   .study:hover {
     transform: translate(-2px, -2px);
     box-shadow: var(--shadow-pop);
+  }
+
+  /* The card's surface, as its own element: the page transition grows it into the case study's header. */
+  .study__surface {
+    position: absolute;
+    inset: -1px;
+    z-index: -1;
+    border: 1px solid var(--color-line);
+    border-radius: inherit;
+    background: var(--color-surface);
+  }
+
+  .study__body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: var(--space-2);
   }
 
   .study__meta {

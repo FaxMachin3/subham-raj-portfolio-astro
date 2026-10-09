@@ -2,7 +2,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import BreakFixControls from '@/components/islands/BreakFixControls';
-import { $ready, $statuses, $targets } from '@/stores/fixes';
+import { $prState, $ready, $runActive, $statuses, $targets } from '@/stores/fixes';
+import { FIX_ORDER } from '@/fixes/registry';
 import { FIX_IDS, type FixId, type FixStatus } from '@/fixes/types';
 
 let stopCards = () => {};
@@ -37,6 +38,21 @@ const breakButton = () => screen.getByRole<HTMLButtonElement>('button', { name: 
 const fixButton = () => screen.getByRole<HTMLButtonElement>('button', { name: /Let Subham fix it|Fixing/ });
 
 describe('BreakFixControls', () => {
+  it('does not let an earlier merged glow unlock a newer run', async () => {
+    vi.useFakeTimers();
+    FIX_IDS.forEach((id) => $statuses.setKey(id, 'broken'));
+    cards((_, target) => target);
+    render(<BreakFixControls />);
+    await act(async () => vi.advanceTimersByTimeAsync(10));
+    act(() => fixButton().click());
+    await act(async () => vi.advanceTimersByTimeAsync(5500));
+    expect($prState.get()).toBe('merged');
+    act(() => breakButton().click());
+    await act(async () => vi.advanceTimersByTimeAsync(1500));
+    expect($runActive.get()).toBe(true);
+    expect(breakButton().disabled).toBe(true);
+    expect(screen.getByRole('button', { name: 'Cancel run' })).toBeTruthy();
+  });
   it('says the demos are loading until every one is ready', async () => {
     $ready.setKey('plot', false);
     render(<BreakFixControls />);
@@ -51,7 +67,7 @@ describe('BreakFixControls', () => {
     await act(async () => vi.advanceTimersByTimeAsync(10));
     act(() => breakButton().click());
     await act(async () => vi.advanceTimersByTimeAsync(3000));
-    expect(screen.getByRole('link', { name: 'See what broke ↓' }).getAttribute('href')).toBe('#fixes');
+    expect(screen.getByRole('link', { name: 'See what broke ↓' }).getAttribute('href')).toBe('#fix-cards');
     act(() => fixButton().click());
     await act(async () => vi.advanceTimersByTimeAsync(12_000));
     expect(screen.getByRole('link', { name: 'See your results ↓' }).getAttribute('href')).toBe('#results');
@@ -127,6 +143,42 @@ describe('BreakFixControls', () => {
     await act(async () => vi.advanceTimersByTimeAsync(5000));
     expect($statuses.get().i18n).toBe('broken'); // commit 2 was never requested
     expect(screen.getByRole('status').textContent).not.toContain('merged');
+  });
+
+  it('locks the cards during a run, and Cancel stops it and gives everything back', async () => {
+    FIX_IDS.forEach((id) => $statuses.setKey(id, 'broken'));
+    cards(() => 'hang');
+    render(<BreakFixControls />);
+    await waitFor(() => expect(fixButton().disabled).toBe(false));
+    act(() => fixButton().click());
+    expect($runActive.get()).toBe(true);
+    await waitFor(() => expect($statuses.get()[FIX_ORDER[0]!]).toBe('fixing'));
+    act(() => screen.getByRole('button', { name: 'Cancel run' }).click());
+    expect($runActive.get()).toBe(false);
+    expect($statuses.get()[FIX_ORDER[0]!]).toBe('cancelled');
+    expect(screen.getByRole('status').textContent).toContain('Run cancelled.');
+    expect(screen.queryByRole('button', { name: 'Cancel run' })).toBeNull();
+    await waitFor(() => expect(fixButton().disabled).toBe(false));
+    expect($prState.get()).not.toBe('merged');
+  });
+
+  it('never reports merged if a demo is not fixed when the run ends', async () => {
+    vi.useFakeTimers();
+    $prState.set('none');
+    FIX_IDS.forEach((id) => $statuses.setKey(id, 'broken'));
+    cards((_, target) => target);
+    render(<BreakFixControls />);
+    await act(async () => vi.advanceTimersByTimeAsync(10));
+    act(() => fixButton().click());
+    // Every commit is in; the run is in its last pause before merging when a card changes underneath it.
+    await act(async () => vi.advanceTimersByTimeAsync(900 * 5 + 100));
+    expect($statuses.get()[FIX_ORDER.at(-1)!]).toBe('fixed');
+    stopCards();
+    act(() => $statuses.setKey(FIX_ORDER[0]!, 'broken'));
+    await act(async () => vi.advanceTimersByTimeAsync(12_000));
+    expect($prState.get()).toBe('open');
+    expect($runActive.get()).toBe(false);
+    expect(screen.getByRole('status').textContent).toContain('A fix didn’t complete.');
   });
 
   it('cancels a run in progress when the visitor leaves the page', async () => {

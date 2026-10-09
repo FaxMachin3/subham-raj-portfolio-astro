@@ -19,7 +19,7 @@ npm run verify        # every quality gate, the same as CI
 ```text
               Astro pages (static HTML, zero JS by default)
   ┌────────────────────────────────────────────────────────────────┐
-  │ Hero · Work · Writing · Leverage · Experience · Contact        │
+  │ Hero · Work · Writing · Leverage · Lab · Experience · Contact  │
   │ /work/[slug] · /writing/[slug] (MDX) · /resume · 404           │
   │ /og/[slug].png (build-time social images) · /llms.txt          │
   └───────────────┬────────────────────────────────────────────────┘
@@ -160,8 +160,10 @@ Animation explains what is happening; it never decorates. The break/fix run is c
 - **Per demo:** the fixed plot streams in while staying responsive (the broken one freezes, then appears at
   once); Fix 05's focus ring glides between rows, headers and cells; translations crossfade.
 - **Merged:** the PR badge pops, results rows cascade in and their numbers count up.
-- **Site-wide:** case-study cards morph into the page heading and back again (cross-document view
-  transitions; the old title fades out before the new one fades in, because the two wrap differently), the
+- **Site-wide:** case-study cards are a container transform: the card's surface grows into the case study's
+  header card and shrinks back on return (cross-document view transitions; surface and title share one timing,
+  text fades through and is never scaled, the rest of the page crossfades without sliding; about 300 ms to open
+  and 240 ms to return). Coming back puts focus on the card that was opened (`src/lib/return-focus.ts`). The
   theme switch reveals the new theme in a circle from the control, and sections slide in on scroll
   (`animation-timeline: view()`). "← All case studies" goes back in history when the page was opened from the
   homepage in this tab (`src/lib/back-link.ts`), so it returns to the exact scroll position like Back does.
@@ -226,8 +228,9 @@ Update `site` in `astro.config.mjs` and `url` in `src/data/site.ts` if the domai
 ## Failure, cancellation and measurement honesty
 
 Every demo has explicit **failed** and **cancelled** states (never shown as healthy or fixed). The
-whole-site controller ends a run with a message and usable controls when a demo fails, and leaving the page
-cancels work in flight. Each card has a "How this is measured" note (`src/fixes/methods.ts`), the health bar
+whole-site controller ends a run with a message and usable controls when a demo fails, locks every card's own
+Break/Fix while it runs, can be cancelled, and reports "merged" only if all six demos really ended fixed.
+Leaving the page cancels work in flight; superseded loads (routes, translations) never overwrite newer state. Each card has a "How this is measured" note (`src/fixes/methods.ts`), the health bar
 shows nothing until it has a real sample, and production results are labelled as history, not live
 measurements. Details: [ADR 0007](docs/adr/0007-fonts-hydration-and-honest-measurement.md).
 `/accessibility` states the WCAG 2.2 AA target, what is tested and the known limits.

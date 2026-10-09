@@ -1,5 +1,6 @@
 ---
 import { FIX_METHODS } from '@/fixes/methods';
+import BreakFixControls from '@/components/islands/BreakFixControls';
 import PlotFix from '@/components/islands/fixes/PlotFix';
 import JankFix from '@/components/islands/fixes/JankFix';
 import BundleFix from '@/components/islands/fixes/BundleFix';
@@ -29,14 +30,24 @@ const notes = {
 ---
 
 <section class="section wrap" id="fixes" aria-labelledby="fixes-title">
-  <div class="section-head" data-reveal>
-    <h2 id="fixes-title">Six things I fix for a living</h2>
-    <p>
-      An interactive lab. Each card can be broken and fixed on its own: problems are re-created with synthetic
-      workloads, and the measurements are real, taken in your browser. Each card explains how it measures.
-    </p>
+  <div class="lab">
+    <div class="lab__intro">
+      <p class="lab__eyebrow mono">Interactive lab · six things I fix for a living</p>
+      <h2 id="fixes-title" class="lab__title">
+        Break it, then watch me fix it.
+      </h2>
+      <p class="lab__lede">
+        This page is a working demo. Six problems I fixed in production are re-created here and measured live
+        in your browser.
+      </p>
+      <p class="lab__how">
+        Break the whole site and let me fix it, or use each card on its own below. The problems are synthetic
+        workloads; the measurements are real, and each card explains how it measures.
+      </p>
+    </div>
+    <BreakFixControls client:idle />
   </div>
-  <div class="fix-grid">
+  <div class="fix-grid" id="fix-cards">
     <PlotFix client:idle productionNote={notes.plot} method={FIX_METHODS.plot} />
     <JankFix client:idle productionNote={notes.jank} method={FIX_METHODS.jank} />
     <BundleFix client:idle productionNote={notes.bundle} method={FIX_METHODS.bundle} />
@@ -45,3 +56,85 @@ const notes = {
     <I18nFix client:idle method={FIX_METHODS.i18n} />
   </div>
 </section>
+
+<style>
+  /* The lab console: the controls sit directly above the cards they break and fix. */
+  .lab {
+    display: grid;
+    gap: var(--space-6);
+    margin-bottom: var(--space-8);
+    padding: clamp(1.25rem, 3vw, 2rem);
+    border: 1px solid var(--color-night-edge);
+    border-radius: var(--radius-lg);
+    background: var(--color-night);
+    color: #e9e9e4;
+    box-shadow: 0 24px 48px -32px rgb(0 0 0 / 0.55);
+  }
+
+  .lab__eyebrow {
+    margin: 0 0 var(--space-2);
+    color: var(--color-night-muted);
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .lab__title {
+    margin: 0 0 var(--space-3);
+    font-size: var(--text-h2);
+    line-height: 1.1;
+  }
+
+  .lab__lede,
+  .lab__how {
+    max-width: 40rem;
+    margin: 0 0 var(--space-2);
+    color: var(--color-night-muted);
+  }
+
+  .lab__lede {
+    color: #e9e9e4;
+  }
+
+  .lab__how {
+    margin: 0;
+    font-size: 0.92rem;
+  }
+
+  /* Labels may wrap (larger text, spacing overrides); stretching keeps the two buttons the same height. */
+  .lab :global(.controls) {
+    align-items: stretch;
+    align-content: start;
+  }
+
+  /* Side by side only where "Let Subham fix it" fits on one line; else stacked, so labels never re-wrap. */
+  .lab :global(.controls .btn) {
+    flex: 1 1 12rem;
+    min-width: 0;
+    padding-inline: 0.9rem;
+  }
+
+  .lab :global(.btn--fix) {
+    border-color: #f4f3ee;
+    background: #f4f3ee;
+    color: #121212;
+  }
+
+  .lab :global(.controls__next),
+  .lab :global(.controls__note) {
+    color: var(--color-night-muted);
+  }
+
+  .lab :global(.controls__next a),
+  .lab :global(.controls__cancel) {
+    color: #f4f3ee;
+  }
+
+  @media (min-width: 960px) {
+    .lab {
+      grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);
+      column-gap: var(--space-12);
+      align-items: center;
+    }
+  }
+</style>

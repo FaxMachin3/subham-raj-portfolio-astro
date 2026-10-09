@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import FixCard from '@/components/islands/FixCard';
-import { $results, $statuses, $targets } from '@/stores/fixes';
+import { $results, $runActive, $statuses, $targets } from '@/stores/fixes';
 
 function mockReducedMotion(reduce: boolean) {
   vi.stubGlobal(
@@ -54,6 +54,15 @@ describe('FixCard', () => {
     expect($targets.get().plot?.target).toBe('broken');
     expect(screen.getByTestId('status').textContent).toBe('Breaking…');
     expect(screen.getByRole('button', { name: 'Fix' })).toHaveProperty('disabled', true);
+  });
+
+  it('locks its own Break and Fix while a whole-site run is in progress', () => {
+    renderCard();
+    act(() => $runActive.set(true));
+    expect(screen.getByRole('button', { name: 'Break' })).toHaveProperty('disabled', true);
+    expect(screen.getByRole('button', { name: 'Fix' })).toHaveProperty('disabled', true);
+    act(() => $runActive.set(false));
+    expect(screen.getByRole('button', { name: 'Fix' })).toHaveProperty('disabled', false);
   });
 
   it('renders measurements, and "n/a" when the browser cannot measure', () => {

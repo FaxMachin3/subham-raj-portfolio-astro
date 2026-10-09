@@ -30,15 +30,23 @@ export function busyWait(ms: number): void {
 /** Runs `totalMs` of work in small slices whenever the browser is idle. */
 export function runWhenIdle(totalMs: number, sliceMs = 4, signal?: AbortSignal): Promise<void> {
   return new Promise((resolve) => {
+    if (signal?.aborted) return resolve();
     let remaining = totalMs;
+    let cancel!: () => void;
+    const finish = () => {
+      cancel();
+      signal?.removeEventListener('abort', finish);
+      resolve();
+    };
     const step = (deadline: IdleDeadlineLike) => {
-      while (remaining > 0 && deadline.timeRemaining() > sliceMs && !signal?.aborted) {
+      while (remaining > 0 && deadline.timeRemaining() > sliceMs) {
         busyWait(sliceMs);
         remaining -= sliceMs;
       }
-      if (remaining > 0 && !signal?.aborted) requestIdle(step);
-      else resolve();
+      if (remaining > 0) cancel = requestIdle(step);
+      else finish();
     };
-    requestIdle(step);
+    signal?.addEventListener('abort', finish, { once: true });
+    cancel = requestIdle(step);
   });
 }

@@ -85,6 +85,8 @@ interface CalibrationOptions {
   sample?: number;
   min?: number;
   max?: number;
+  /** Largest refinement probe; keeps calibration itself from freezing a slow device. */
+  maxProbe?: number;
   /** The work being timed; only its duration matters. */
   measure?: (incoming: readonly PlotNode[]) => unknown;
 }
@@ -93,11 +95,18 @@ interface CalibrationOptions {
  * Picks a node count so the quadratic version takes about `targetMs` on this device: dramatic on a
  * laptop, never punishing on a slow phone. Quadratic cost means n scales with the square root.
  * A small sample under-predicts at large n (cache effects differ by engine), so a second probe at
- * about a third of the first estimate refines it; that probe costs roughly a ninth of the target.
+ * about a third of the first estimate refines it; that probe costs roughly a ninth of the target, and
+ * never more than `maxProbe` nodes.
  */
 export function calibrateCount(
   targetMs: number,
-  { sample = 4000, min = 1600, max = 80000, measure = plotQuadratic }: CalibrationOptions = {},
+  {
+    sample = 4000,
+    min = 1600,
+    max = 80000,
+    maxProbe = 12000,
+    measure = plotQuadratic,
+  }: CalibrationOptions = {},
 ): number {
   const clamp = (n: number) => Math.max(min, Math.min(max, Math.round(n / 100) * 100));
   const extrapolate = (size: number) => {
@@ -107,6 +116,6 @@ export function calibrateCount(
 
   measure(generateNodes(1500)); // warm up the JIT so the sample isn't dominated by compilation
   const first = extrapolate(sample);
-  const probe = Math.round(first / 3);
+  const probe = Math.min(maxProbe, Math.round(first / 3));
   return clamp(probe > sample ? extrapolate(probe) : first);
 }

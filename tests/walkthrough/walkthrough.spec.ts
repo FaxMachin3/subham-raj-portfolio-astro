@@ -109,10 +109,10 @@ test('walkthrough: every page, flow and control', async ({ page, isMobile, conte
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(
       /I make broken interfaces\s+fast, accessible and global\./,
     );
-    await expect(page.getByText('This page is a working demo.')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Explore the interactive lab ↓' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Résumé' }).first()).toBeVisible();
     if (!touch) {
-      for (const name of ['The fixes', 'Work', 'Experience'])
+      for (const name of ['Work', 'The fixes', 'Experience'])
         await expect(page.getByRole('link', { name, exact: true }).first()).toBeVisible();
     }
     await page.waitForTimeout(800);
@@ -159,6 +159,13 @@ test('walkthrough: every page, flow and control', async ({ page, isMobile, conte
     await settled();
   });
 
+  await step('Explore the interactive lab · the console sits directly above the cards', async () => {
+    await press(page.getByRole('link', { name: 'Explore the interactive lab ↓' }));
+    await expect(page.getByText('This page is a working demo.')).toBeInViewport();
+    await expect(page.getByRole('button', { name: 'Break this site' })).toBeInViewport();
+    await page.waitForTimeout(900);
+  });
+
   await step('Break this site · six issues break, the headline breaks word by word', async () => {
     await press(page.getByRole('button', { name: 'Break this site' }));
     await expect(page.locator('.toast--visible')).toContainText('Breaking the site.');
@@ -168,7 +175,8 @@ test('walkthrough: every page, flow and control', async ({ page, isMobile, conte
     await expect
       .poll(() => page.locator('.word--global').evaluate((el) => getComputedStyle(el, '::after').visibility))
       .toBe('visible');
-    await page.waitForTimeout(1200);
+    await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'smooth' }));
+    await page.waitForTimeout(1500);
   });
 
   await step('“See what broke” · every card reports Broken with a measured “before”', async () => {
@@ -181,8 +189,7 @@ test('walkthrough: every page, flow and control', async ({ page, isMobile, conte
   });
 
   await step('Let Subham fix it · six commits with x-rays, words heal, PR merges', async () => {
-    await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'smooth' }));
-    await page.waitForTimeout(600);
+    await see(page.locator('.lab'));
     await press(page.getByRole('button', { name: 'Let Subham fix it' }));
     await expect(page.locator('.toast--visible')).toContainText('Commit 1/6');
     await expect(page.locator('html')).toHaveAttribute('data-accessible', 'healed', { timeout: 60_000 });

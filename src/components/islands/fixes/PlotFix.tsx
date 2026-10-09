@@ -9,6 +9,9 @@ import type { Measurement } from '@/fixes/types';
 const PALETTE = ['#34d399', '#60a5fa', '#f472b6', '#fbbf24', '#a78bfa', '#fb923c'];
 const TARGET_FREEZE_MS = 1200;
 const STREAM_FRAMES = 12;
+/** Used without calibrating when motion is reduced: calibrating means freezing the page on purpose. */
+const BOUNDED_COUNT = 1600;
+const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 export default function PlotFix({ productionNote, method }: { productionNote: string; method?: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -26,7 +29,8 @@ export default function PlotFix({ productionNote, method }: { productionNote: st
    */
   const draw = useCallback((nodes: PlotNode[], stream = false) => {
     lastNodes.current = nodes;
-    const canvas = canvasRef.current!;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
     // Null only where canvas is unsupported; the plot then stays blank and the timings still run.
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
@@ -46,7 +50,7 @@ export default function PlotFix({ productionNote, method }: { productionNote: st
     };
 
     const run = ++streamRef.current;
-    if (!stream || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    if (!stream || prefersReducedMotion()) {
       paint(0, nodes.length);
       return;
     }
@@ -74,6 +78,7 @@ export default function PlotFix({ productionNote, method }: { productionNote: st
   }, [draw]);
 
   const nodeCount = () => {
+    if (prefersReducedMotion()) return BOUNDED_COUNT;
     if (countRef.current === null) {
       countRef.current = calibrateCount(TARGET_FREEZE_MS);
       setCalibration(`${formatCount(countRef.current)} incoming records, calibrated to ~1–2 s here`);
@@ -82,9 +87,13 @@ export default function PlotFix({ productionNote, method }: { productionNote: st
   };
 
   useFixLifecycle('plot', {
-    async break(): Promise<Measurement> {
+    async break(signal): Promise<Measurement> {
       setFrozen(true);
-      await afterNextPaint(); // let the overlay paint before the main thread is blocked on purpose
+      await afterNextPaint(signal); // let the overlay paint before the main thread is blocked on purpose
+      if (signal.aborted) {
+        setFrozen(false);
+        signal.throwIfAborted();
+      }
       const count = nodeCount();
       const nodes = generateNodes(count);
       const { result, ms } = timed(() => plotQuadratic(nodes));
@@ -101,10 +110,12 @@ export default function PlotFix({ productionNote, method }: { productionNote: st
         supported: true,
       };
     },
-    async fix(): Promise<Measurement> {
+    async fix(signal): Promise<Measurement> {
+      signal.throwIfAborted();
       const count = nodeCount();
       const nodes = generateNodes(count);
-      await afterNextPaint();
+      await afterNextPaint(signal);
+      signal.throwIfAborted();
       const { result, ms } = timed(() => plotLinear(nodes));
       draw(result, true);
       setPlotLabel(

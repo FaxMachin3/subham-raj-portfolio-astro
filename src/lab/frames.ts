@@ -31,21 +31,47 @@ export function analyzeFrames(timestamps: readonly number[]): FrameReport {
   return { dropped, longestMs: Math.max(0, ...gaps), frameMs, enough: gaps.length >= MIN_GAPS };
 }
 
-/** Records animation-frame timestamps for `durationMs`. */
+/**
+ * Records animation-frame timestamps for `durationMs`. Aborting settles it at once with the frames so far:
+ * background tabs run no animation frames, so waiting for the next one could take forever.
+ */
 export function recordFrames(durationMs: number, signal?: AbortSignal): Promise<number[]> {
   return new Promise((resolve) => {
     const stamps: number[] = [];
+    if (signal?.aborted) return resolve(stamps);
     const end = performance.now() + durationMs;
+    let handle = 0;
+    const finish = () => {
+      cancelAnimationFrame(handle);
+      signal?.removeEventListener('abort', finish);
+      resolve(stamps);
+    };
     const tick = (t: number) => {
       stamps.push(t);
-      if (t < end && !signal?.aborted) requestAnimationFrame(tick);
-      else resolve(stamps);
+      if (t < end) handle = requestAnimationFrame(tick);
+      else finish();
     };
-    requestAnimationFrame(tick);
+    signal?.addEventListener('abort', finish, { once: true });
+    handle = requestAnimationFrame(tick);
   });
 }
 
-/** Resolves after the browser has painted at least once, so UI changes are visible before heavy work. */
-export function afterNextPaint(): Promise<void> {
-  return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+/**
+ * Resolves after the browser has painted at least once, so UI changes are visible before heavy work.
+ * Aborting resolves it straight away; callers check the signal afterwards.
+ */
+export function afterNextPaint(signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve) => {
+    if (signal?.aborted) return resolve();
+    let handle = 0;
+    const finish = () => {
+      cancelAnimationFrame(handle);
+      signal?.removeEventListener('abort', finish);
+      resolve();
+    };
+    signal?.addEventListener('abort', finish, { once: true });
+    handle = requestAnimationFrame(() => {
+      handle = requestAnimationFrame(finish);
+    });
+  });
 }

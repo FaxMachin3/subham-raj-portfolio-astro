@@ -241,36 +241,74 @@ p {
   text-align: left;
 }
 
-/* Page-to-page navigations morph (case-study card title → page heading) in supporting browsers. */
+/*
+ * Page transitions (cross-document view transitions, where supported). Opening a case study is a container
+ * transform: the card's surface grows into the page's header card and shrinks back on the way out. The
+ * surface and the title move together on one timing; the content fades through and the rest of the page
+ * crossfades in place, with no slide. Returning is shorter than opening. Text is never scaled or crossfaded
+ * at full strength, so it never smears. Reduced motion turns all of it off (below).
+ */
 @view-transition {
   navigation: auto;
 }
 
-::view-transition-group(*) {
-  animation-duration: 0.35s;
-  animation-timing-function: cubic-bezier(0.3, 1, 0.4, 1);
+:root {
+  --vt-ease: cubic-bezier(0.2, 0, 0, 1);
+  --vt-duration: 0.3s;
 }
+
+/* Set on <html> while a transition back to the homepage runs (see BaseLayout). */
+:root[data-vt-dir='return'] {
+  --vt-duration: 0.24s;
+}
+
+::view-transition-group(*) {
+  animation-duration: var(--vt-duration);
+  animation-timing-function: var(--vt-ease);
+}
+
+/* Keep the browser's complementary root crossfade so the themed canvas is never exposed between pages. */
 
 /*
- * A card title (two small lines) and its page heading (three large lines) wrap differently, so the default
- * crossfade of both snapshots, scaled over each other, reads as doubled, smeared text. The box still glides
- * between the two; the old text fades out before the new one fades in, so they never overlap.
+ * The card's surface (a plain box behind its content) is the shared element. Two plain boxes stretched
+ * over the morphing frame read as one solid shape changing size; cards without a partner just fade.
  */
+::view-transition-old(.study-surface),
+::view-transition-new(.study-surface) {
+  height: 100%;
+}
+
+/* The card's content sits above the surface and fades through as it moves; it is never scaled. */
+::view-transition-group(.study-body) {
+  overflow: clip;
+}
+
+::view-transition-old(.study-body),
+::view-transition-new(.study-body) {
+  width: 100%;
+  height: 100%;
+  object-fit: none;
+  object-position: left top;
+}
+
+/* Content and title share one fade: out in the first 40%, in over the last 55%. */
+::view-transition-old(.study-body),
 ::view-transition-old(.study-title) {
-  animation: vt-title-out 0.12s ease-in both;
+  animation: vt-fade-out calc(var(--vt-duration) * 0.4) ease-in both;
 }
 
+::view-transition-new(.study-body),
 ::view-transition-new(.study-title) {
-  animation: vt-title-in 0.2s 0.12s ease-out both;
+  animation: vt-fade-in calc(var(--vt-duration) * 0.55) calc(var(--vt-duration) * 0.45) ease-out both;
 }
 
-@keyframes vt-title-out {
+@keyframes vt-fade-out {
   to {
     opacity: 0;
   }
 }
 
-@keyframes vt-title-in {
+@keyframes vt-fade-in {
   from {
     opacity: 0;
   }

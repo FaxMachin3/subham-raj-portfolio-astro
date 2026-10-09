@@ -9,7 +9,7 @@ const LABELS: Record<FixId, string> = {
   jank: 'Sidebar animation',
   bundle: 'JS on load',
   network: 'Requests in 6 s',
-  a11y: 'Accessibility audit',
+  a11y: 'Demo accessibility checks',
   i18n: 'Missing translations',
 };
 

@@ -95,13 +95,13 @@ describe('HealthBar', () => {
     expect(show.getAttribute('aria-expanded')).toBe('false');
     act(() => show.click());
     expect(document.documentElement.dataset.hud).toBeUndefined();
-    expect(localStorage.getItem('hud')).toBeNull();
+    expect(localStorage.getItem('hud')).toBe('expanded');
   });
 
   it('reads a collapsed preference applied before hydration, and survives blocked storage', () => {
     stubObservers([]);
     document.documentElement.dataset.hud = 'collapsed';
-    vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new Error('blocked');
     });
     render(<HealthBar />);

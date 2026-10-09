@@ -1,5 +1,4 @@
 ---
-import BreakFixControls from '@/components/islands/BreakFixControls';
 import { requireMetric, unbreakable } from '@/lib/metrics';
 import { site } from '@/data/site';
 
@@ -12,39 +11,37 @@ const highlights = [
 ---
 
 <section class="hero wrap" aria-labelledby="hero-title">
-  <p class="hero__kicker mono">
-    <span class="hero__role">{site.role}</span>8 years · React · TypeScript · ex-TRM Labs, Paytm ·{' '}
-    {site.availability.toLowerCase()}
-  </p>
-  <h1 id="hero-title">
-    I make broken interfaces{' '}
-    <span class="nowrap">
-      <span class="word word--fast">fast</span>,
-    </span>{' '}
-    <span class="word word--accessible">accessible</span> and{' '}
-    <span class="word word--global">
-      <span class="word__text">global</span>
-    </span>
-    .
-  </h1>
-  <p class="hero__lede">
-    I build data-heavy and AI product interfaces in React and TypeScript, with a focus on performance and
-    accessibility.
-  </p>
-  <div class="hero__actions">
-    <a class="btn btn--solid" href="#work">
-      View selected work
-    </a>
-    <a class="btn" href="/resume">
-      Résumé
-    </a>
-  </div>
-  <div class="hero__lab">
-    <p class="hero__lab-intro">
-      This page is a working demo. <strong>Break it, then watch me fix it.</strong> Each problem re-creates
-      one I fixed in production, measured live in your browser.
+  <div class="hero__main">
+    <p class="hero__kicker mono">
+      <span class="hero__role">{site.role}</span>8 years · React · TypeScript · ex-TRM Labs, Paytm ·{' '}
+      {site.availability.toLowerCase()}
     </p>
-    <BreakFixControls client:idle />
+    <h1 id="hero-title">
+      I make broken interfaces{' '}
+      <span class="nowrap">
+        <span class="word word--fast">fast</span>,
+      </span>{' '}
+      <span class="word word--accessible">accessible</span> and{' '}
+      <span class="word word--global">
+        <span class="word__text">global</span>
+      </span>
+      .
+    </h1>
+    <p class="hero__lede">
+      I build data-heavy and AI product interfaces in React and TypeScript, with a focus on performance and
+      accessibility.
+    </p>
+    <div class="hero__actions">
+      <a class="btn btn--solid" href="#work">
+        View selected work
+      </a>
+      <a class="btn" href="/resume">
+        Résumé
+      </a>
+      <a class="hero__lab-link" href="#fixes">
+        Explore the interactive lab ↓
+      </a>
+    </div>
   </div>
   <p class="hero__highlights-label mono">From my production work at TRM Labs</p>
   <ul class="hero__highlights" aria-label="Highlights from my production work at TRM Labs">
@@ -220,20 +217,13 @@ const highlights = [
     margin: 0 0 var(--space-8);
   }
 
-  .hero__lab {
-    max-width: 46rem;
-    padding: var(--space-4) var(--space-6) var(--space-2);
-    border: 1px dashed var(--color-line);
-    border-radius: var(--radius-lg);
-  }
-
-  .hero__lab-intro {
-    margin: 0 0 var(--space-3);
-    color: var(--color-muted);
-  }
-
-  .hero__lab-intro strong {
+  .hero__lab-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
     color: var(--color-ink);
+    font-weight: 600;
+    text-underline-offset: 3px;
   }
 
   .hero__highlights-label {

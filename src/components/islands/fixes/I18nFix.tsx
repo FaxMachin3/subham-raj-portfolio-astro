@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import FixCard from '../FixCard';
 import { useFixLifecycle } from '@/fixes/useFixLifecycle';
 import { importCounted } from '@/lab/requests';
@@ -30,9 +30,19 @@ export default function I18nFix({ method }: { method?: string }) {
   const shownRef = useRef('en');
   const [note, setNote] = useState('en · bundled with the page');
   const cache = useRef(new Map<string, Dictionary>());
-  // The language picked last: a slower, earlier request must not overwrite it when it arrives.
-  const requested = useRef('en');
+  // Every pick gets an id: a slower, earlier load must not overwrite a later pick, even of the same language
+  // (a load started in fixed mode must not translate the panel after a switch to broken mode).
+  const requestId = useRef(0);
   const modeRef = useRef<'broken' | 'fixed'>('fixed');
+
+  useEffect(() => {
+    const abandon = () => requestId.current++;
+    addEventListener('pagehide', abandon);
+    return () => {
+      removeEventListener('pagehide', abandon);
+      abandon();
+    };
+  }, []);
 
   const show = (code: string, next: Dictionary | null, message: string) => {
     shownRef.current = code;
@@ -42,8 +52,10 @@ export default function I18nFix({ method }: { method?: string }) {
   };
 
   /** Applies a language and returns how many strings are missing in it. Rejects if it can't be loaded. */
-  const apply = async (code: string): Promise<number> => {
-    requested.current = code;
+  const apply = async (code: string, signal?: AbortSignal): Promise<number> => {
+    const id = ++requestId.current;
+    const mode = modeRef.current;
+    const current = () => requestId.current === id && modeRef.current === mode && !signal?.aborted;
     setLang(code);
     if (code === 'en') {
       show('en', en, 'en · bundled with the page');
@@ -63,7 +75,7 @@ export default function I18nFix({ method }: { method?: string }) {
     try {
       const { result: loaded, fetched } = await importCounted(code, loaderFor(code)!);
       cache.current.set(code, loaded);
-      if (requested.current === code) {
+      if (current()) {
         const how = fetched
           ? `loaded in ${formatMs(performance.now() - start)}`
           : 'already in memory, 0 requests';
@@ -71,9 +83,8 @@ export default function I18nFix({ method }: { method?: string }) {
       }
       return I18N_KEYS.filter((k) => !loaded[k]).length;
     } catch (error) {
-      if (requested.current === code) {
+      if (current()) {
         // Put the menu back on the language the panel is still showing.
-        requested.current = shownRef.current;
         setLang(shownRef.current);
         setNote(`couldn’t load ${code}.json · try again`);
       }
@@ -81,11 +92,11 @@ export default function I18nFix({ method }: { method?: string }) {
     }
   };
 
-  const measure = async (mode: 'broken' | 'fixed'): Promise<Measurement> => {
+  const measure = async (mode: 'broken' | 'fixed', signal: AbortSignal): Promise<Measurement> => {
     modeRef.current = mode;
     if (mode === 'fixed') cache.current.clear();
     const code = lang === 'en' ? 'hi' : lang;
-    const missing = await apply(code);
+    const missing = await apply(code, signal);
     return {
       value: missing,
       unit: 'missing',
@@ -96,8 +107,8 @@ export default function I18nFix({ method }: { method?: string }) {
   };
 
   useFixLifecycle('i18n', {
-    break: () => measure('broken'),
-    fix: () => measure('fixed'),
+    break: (signal) => measure('broken', signal),
+    fix: (signal) => measure('fixed', signal),
   });
 
   const text = (key: I18nKey) => (dict?.[key] ? dict[key] : <span className="raw-key">{`{{${key}}}`}</span>);

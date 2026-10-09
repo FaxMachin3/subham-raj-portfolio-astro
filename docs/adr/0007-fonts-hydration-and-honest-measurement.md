@@ -58,8 +58,9 @@ synthetic payloads are reported on their own. If either budget is ever at risk, 
 
 ## Integration decisions
 
-Keep the existing root transition, card-title glide, explicit instant history corrections, and early themed
-canvas. The supplied root stagger fades both page snapshots to low opacity at once; that could resemble
-the dark flicker previously resolved on the user's iPhone. Retain the stronger first-frame font assertions,
+Keep the existing root crossfade, explicit instant history corrections, binary font priming, and early themed
+canvas. The new lab/motion patch adds shared card surfaces, content and titles with 300 ms opening and
+240 ms return timing, plus focus restoration. Its delayed root fade is omitted: both snapshots could be
+dim at once and expose the dark canvas, resembling the previously reported iPhone flicker. Retain the stronger first-frame font assertions,
 back-link safeguards, return-history tests, Windows clipboard normalization and portable content setup.
 Physical iPhone verification is still required for this new homepage layout.

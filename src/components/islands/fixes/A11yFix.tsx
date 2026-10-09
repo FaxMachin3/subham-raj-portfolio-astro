@@ -362,16 +362,17 @@ export default function A11yFix({ productionNote, method }: { productionNote: st
   const regionRef = useRef<HTMLDivElement>(null);
   const table = useTable();
 
-  const audit = async (next: 'broken' | 'fixed') => {
+  const audit = async (next: 'broken' | 'fixed', signal: AbortSignal) => {
     table.reset();
     setVariant(next);
-    await afterNextPaint();
+    await afterNextPaint(signal);
+    signal.throwIfAborted();
     return toMeasurement(auditRegion(regionRef.current!));
   };
 
   useFixLifecycle('a11y', {
-    break: () => audit('broken'),
-    fix: () => audit('fixed'),
+    break: (signal) => audit('broken', signal),
+    fix: (signal) => audit('fixed', signal),
   });
 
   return (
