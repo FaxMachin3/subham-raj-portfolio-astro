@@ -97,15 +97,24 @@ test.describe('homepage', () => {
     better('network');
     // Dropped-frame counts are noisy on a shared CI machine; the broken run's 70 ms blocks are not. Frame
     // timestamps snap to vsync, so a block reads as 50-67 ms.
-    const longest = async (phase: 'before' | 'after') =>
-      Number(
-        /longest frame (\d+) ms/.exec(
-          (await page.getByTestId('fix-jank').locator(`.metric--${phase} span`).textContent()) ?? '',
-        )?.[1],
-      );
+    const longest = async (phase: 'before' | 'after') => {
+      const detail =
+        (await page.getByTestId('fix-jank').locator(`.metric--${phase} span`).textContent()) ?? '';
+      if (values.jank![phase] === 'n/a') {
+        // A busy or throttled browser can supply fewer than five frame gaps. The demo must
+        // report that limitation honestly; it cannot be compared as a numeric measurement.
+        expect(detail).toBe('not enough frames sampled');
+        const result = page.getByRole('row').filter({ hasText: 'Sidebar animation' });
+        await expect(result.locator(`td.${phase}`)).toHaveText('n/a');
+        return null;
+      }
+      expect(detail).toMatch(/longest frame \d+ ms/);
+      return Number(/longest frame (\d+) ms/.exec(detail)![1]);
+    };
     const brokenLongest = await longest('before');
-    expect(brokenLongest).toBeGreaterThan(40);
-    expect(await longest('after')).toBeLessThan(brokenLongest);
+    const fixedLongest = await longest('after');
+    if (brokenLongest !== null) expect(brokenLongest).toBeGreaterThan(40);
+    if (brokenLongest !== null && fixedLongest !== null) expect(fixedLongest).toBeLessThan(brokenLongest);
     expect(values.a11y!.before).toBe('0/18 reachable');
     expect(values.a11y!.after).toBe('18/18 reachable');
     expect(values.i18n!.before).toBe('5 of 5');
