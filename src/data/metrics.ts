@@ -71,13 +71,6 @@ export const metrics = {
     approved: true,
     evidence: 'TRM experience record',
   },
-  designSystemMigration: {
-    value: '~65%',
-    label: 'of existing screens migrated',
-    source: 'production',
-    approved: false,
-    evidence: 'From memory; not on the résumé. Confirm with TRM before approving.',
-  },
   orionLaunch: {
     value: 'Mar 2026',
     label: 'Orion chat UI launched',

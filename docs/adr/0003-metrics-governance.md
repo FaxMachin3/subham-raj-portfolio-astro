@@ -21,5 +21,5 @@ device.
 ## Consequences
 
 - Approving a number is a one-line, reviewable change with its evidence next to it.
-- `designSystemMigration` is currently unapproved and does not render.
+- The unconfirmed `designSystemMigration` estimate was removed from the registry and its optional copy.
 - Case-study frontmatter lists metric IDs, so a case study cannot cite a number the registry does not know.

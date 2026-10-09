@@ -5,7 +5,7 @@
     "role": "Frontend Engineer",
     "location": "Remote (Bengaluru)",
     "start": "2023-11",
-    "end": "2026",
+    "end": "2026-10",
     "summary": "TRM Forensics, a graph-based blockchain investigation product used by government agencies and financial institutions.",
     "highlights": [
       "Removed quadratic hot paths in the investigation graph across two renderers (ReGraph, then KeyLines); led a 20+ PR push in which memoized index lookups took plot matching on 1,600 elements from 15.5 s to 14 ms.",
@@ -24,8 +24,8 @@
     "end": "2023-10",
     "summary": "Paytm Payments and Paytm Money.",
     "highlights": [
-      "Led a project that cut a backend service’s running cost by about 90%.",
-      "Built a configurable A/B testing framework and improved frontend load time by about 30%.",
+      "Led a project that cut the running cost of an A/B-testing service by about 90%: it ran its full code path to serve static HTML files, so I added a caching layer and a configuration system that splits traffic between variants (for example 70/30).",
+      "Improved frontend load time by about 30%.",
       "Built a stock-market education video platform and a standalone ETF page."
     ]
   },

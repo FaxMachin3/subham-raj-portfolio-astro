@@ -10,7 +10,7 @@ export const GET: APIRoute = async () => {
 
   const body = `# ${site.name}
 
-> ${site.description} ${site.availability}. Previously at ${roles.map((r) => r.data.company).join(', ')}.
+> ${site.description} ${site.availability}; ${site.workMode.toLowerCase()}; open to ${site.seeking}. Experience at ${roles.map((r) => r.data.company).join(', ')}.
 
 The homepage is a working demo: visitors can break six parts of the site and watch each fix, with every number measured live in their browser. Production results come from his work at TRM Labs.
 

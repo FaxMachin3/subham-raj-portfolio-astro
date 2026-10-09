@@ -52,8 +52,8 @@ const ogAlt = title ?? site.title;
         if (localStorage.getItem('hud') === 'expanded') delete document.documentElement.dataset.hud;
       } catch {}
     </script>
+    {/* Keep a themed canvas before the external stylesheet arrives. Never hide content. */}
     <style is:inline>
-      /* Keep a themed canvas before the external stylesheet arrives. Never hide content. */
       html {
         color-scheme: light dark;
         background: #f5f4ef;

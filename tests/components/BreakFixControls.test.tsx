@@ -153,6 +153,7 @@ describe('BreakFixControls', () => {
     act(() => fixButton().click());
     expect($runActive.get()).toBe(true);
     await waitFor(() => expect($statuses.get()[FIX_ORDER[0]!]).toBe('fixing'));
+    expect(screen.getByTestId('run-step').textContent).toBe('Fixing 1 of 6 · Accessibility');
     act(() => screen.getByRole('button', { name: 'Cancel run' }).click());
     expect($runActive.get()).toBe(false);
     expect($statuses.get()[FIX_ORDER[0]!]).toBe('cancelled');
@@ -171,7 +172,7 @@ describe('BreakFixControls', () => {
     await act(async () => vi.advanceTimersByTimeAsync(10));
     act(() => fixButton().click());
     // Every commit is in; the run is in its last pause before merging when a card changes underneath it.
-    await act(async () => vi.advanceTimersByTimeAsync(900 * 5 + 100));
+    await act(async () => vi.advanceTimersByTimeAsync(400 * 5 + 100));
     expect($statuses.get()[FIX_ORDER.at(-1)!]).toBe('fixed');
     stopCards();
     act(() => $statuses.setKey(FIX_ORDER[0]!, 'broken'));

@@ -23,7 +23,7 @@ export function personNode(): Node {
     url: site.url,
     image: `${site.url}/icon-512.png`,
     email: `mailto:${site.email}`,
-    address: { '@type': 'PostalAddress', addressLocality: 'Bengaluru', addressCountry: 'IN' },
+    address: { '@type': 'PostalAddress', addressLocality: 'Bhubaneswar', addressCountry: 'IN' },
     alumniOf: { '@type': 'CollegeOrUniversity', name: 'ITER, SOA University' },
     sameAs: [site.links.linkedin, site.links.github],
     knowsAbout: [

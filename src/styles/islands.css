@@ -920,18 +920,17 @@ html[data-site='broken'] .fix-card[data-status='broken']:nth-child(even) {
 
 .controls__next {
   display: flex;
-  align-items: center;
+  /* Top-aligned: when the step line wraps or unwraps, nothing in it moves. */
+  align-items: flex-start;
   flex-basis: 100%;
-  /* Fits the link and the 24px Cancel button alike, so swapping them never moves the cards below. */
-  min-height: 1.75rem;
+  /* Two lines reserved: the run's step line can wrap on phones, and swapping it never moves the cards. */
+  min-height: 3.2em;
   margin: 0;
   font-size: 0.88rem;
-  color: var(--color-muted);
 }
 
 .controls__next a {
   display: inline-block;
-  color: var(--color-ink);
   font-weight: 600;
   text-underline-offset: 3px;
   animation: next-in 0.4s ease-out;
@@ -942,12 +941,16 @@ html[data-site='broken'] .fix-card[data-status='broken']:nth-child(even) {
   padding: 0;
   border: 0;
   background: none;
-  color: var(--color-ink);
   font: inherit;
   font-weight: 600;
   text-decoration: underline;
   text-underline-offset: 3px;
   cursor: pointer;
+}
+
+/* The step fills the row and Cancel stays at its end, so a new step never moves either of them. */
+.controls__next > span {
+  flex: 1;
 }
 
 /* Position only: fading text would briefly fail contrast. */
@@ -1012,7 +1015,6 @@ html[data-site='broken'] .fix-card[data-status='broken']:nth-child(even) {
 .controls__note {
   flex-basis: 100%;
   font-size: 0.82rem;
-  color: var(--color-muted);
 }
 
 .toast-region {
@@ -1352,6 +1354,18 @@ html[data-site='broken'] .fix-card[data-status='broken']:nth-child(even) {
 
   :root[data-hud='collapsed'] .hud__label {
     display: flex;
+  }
+
+  /* Away from the lab (and outside a run) it slides off, so it never sits over the rest of the page. */
+  .hud {
+    transition:
+      transform 0.3s,
+      visibility 0.3s;
+  }
+
+  .hud[data-offstage] {
+    visibility: hidden;
+    transform: translateY(calc(100% + 2rem));
   }
 
   .toast {

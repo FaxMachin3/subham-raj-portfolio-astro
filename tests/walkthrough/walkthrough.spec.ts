@@ -105,7 +105,7 @@ test('walkthrough: every page, flow and control', async ({ page, isMobile, conte
   await expect(page.getByRole('button', { name: 'Break this site' })).toBeEnabled();
 
   await step('Home · header, wordmark and hero copy', async () => {
-    await expect(page.getByRole('link', { name: 'Subham Raj, home' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'subham raj (home)' })).toBeVisible();
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(
       /I make broken interfaces\s+fast, accessible and global\./,
     );
@@ -351,7 +351,7 @@ test('walkthrough: every page, flow and control', async ({ page, isMobile, conte
   await step('Résumé page · roles, skills, PDF download', async () => {
     await press(page.getByRole('link', { name: 'Résumé' }).first());
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Subham Raj');
-    await expect(page.getByText('Open to remote roles')).toBeVisible();
+    await expect(page.getByText('Remote · open to relocation · Available immediately')).toBeVisible();
     for (const company of ['TRM Labs', 'Paytm', 'Enterprise Minds', 'Infosys'])
       await expect(page.getByText(company, { exact: false }).first()).toBeVisible();
     await scroll(1200);
@@ -364,7 +364,7 @@ test('walkthrough: every page, flow and control', async ({ page, isMobile, conte
     await page.goto('/this-page-does-not-exist');
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('This one isn’t broken on purpose.');
     await page.waitForTimeout(800);
-    await press(page.getByRole('link', { name: 'Subham Raj, home' }));
+    await press(page.getByRole('link', { name: 'subham raj (home)' }));
     await expect(page).toHaveURL(/\/$/);
   });
 

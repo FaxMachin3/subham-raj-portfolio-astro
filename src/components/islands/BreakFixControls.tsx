@@ -18,7 +18,8 @@ import { useReducedMotion } from '@/lib/useReducedMotion';
 import { useHydrated } from '@/lib/useHydrated';
 
 const STAGGER_MS = 260;
-const BETWEEN_FIXES_MS = 900;
+// Long enough to read the commit; the measurements themselves set the rest of the pace.
+const BETWEEN_FIXES_MS = 400;
 const MERGED_GLOW_MS = 1600;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -36,6 +37,9 @@ interface Progress {
   order: readonly FixId[];
   steps: Partial<Record<FixId, StepState>>;
 }
+
+const stepText = (verb: string, index: number, order: readonly FixId[], id: FixId) =>
+  `${verb} ${index + 1} of ${order.length} · ${FIX_META[id].label}`;
 
 /** Anything short of healthy or fixed: a failed or cancelled run still needs fixing. */
 const isBroken = (status: FixStatus) => status !== 'healthy' && status !== 'fixed';
@@ -60,6 +64,8 @@ export default function BreakFixControls() {
   const [toast, setToast] = useState<Toast | null>(null);
   const [toastVisible, setToastVisible] = useState(false);
   const [progress, setProgress] = useState<Progress | null>(null);
+  // The step a run is on, for the line in the controls. Separate from the toast, which hides on a timer.
+  const [runStep, setRunStep] = useState('');
   const toastTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   // The current whole-site run. Aborting it stops the controller waiting; cards are cancelled separately.
   const runRef = useRef<AbortController | null>(null);
@@ -166,8 +172,9 @@ export default function BreakFixControls() {
     $prState.set('open');
     setProgress({ mode: 'break', order: BREAK_ORDER, steps: {} });
     notify('⚠ Breaking the site.', 'The graph will freeze the page for a second or two, on purpose.', 'warn');
-    for (const id of BREAK_ORDER) {
+    for (const [index, id] of BREAK_ORDER.entries()) {
       if (id === 'plot') continue;
+      setRunStep(stepText('Breaking', index, BREAK_ORDER, id));
       requestTarget(id, 'broken', { quick: true });
       step(id, 'done');
       await sleep(STAGGER_MS);
@@ -176,6 +183,7 @@ export default function BreakFixControls() {
     await sleep(400);
     if (signal.aborted) return;
     step('plot', 'active');
+    setRunStep(stepText('Breaking', BREAK_ORDER.indexOf('plot'), BREAK_ORDER, 'plot'));
     requestTarget('plot', 'broken', { quick: true });
     const outcomes = await Promise.all(BREAK_ORDER.map((id) => waitForStatus(id, 'broken', signal)));
     if (signal.aborted) return;
@@ -202,6 +210,7 @@ export default function BreakFixControls() {
     for (const [index, id] of FIX_ORDER.entries()) {
       const count = `${index + 1}/${FIX_ORDER.length}`;
       step(id, 'active');
+      setRunStep(stepText('Fixing', index, FIX_ORDER, id));
       notify(`Commit ${count}`, FIX_META[id].commit, 'warn');
       requestTarget(id, 'fixed', { quick: true });
       const outcome = await waitForStatus(id, 'fixed', signal);
@@ -225,6 +234,7 @@ export default function BreakFixControls() {
   };
 
   const running = phase === 'breaking' || phase === 'fixing';
+
   const breakDisabled = !ready || reducedMotion || running;
   const fixDisabled = !ready || running || !anyBroken;
 
@@ -253,9 +263,13 @@ export default function BreakFixControls() {
         {/* Always rendered with a reserved height, so its message can change without shifting the page. */}
         <p className="controls__next" data-testid="controls-next">
           {running ? (
-            <button type="button" className="controls__cancel" onClick={cancelRun}>
-              Cancel run
-            </button>
+            <>
+              {/* Not a live region: the toast announces each commit, so this isn't heard twice. */}
+              <span data-testid="run-step">{runStep}</span>
+              <button type="button" className="controls__cancel" onClick={cancelRun}>
+                Cancel run
+              </button>
+            </>
           ) : (
             next
           )}

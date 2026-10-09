@@ -111,6 +111,32 @@ describe('NetworkFix', () => {
     expect(container.textContent).not.toContain('Stale');
   });
 
+  it('stops the frantic broken-mode polling after 20 seconds', async () => {
+    Element.prototype.scrollTo = () => {};
+    const statusPolls: number[] = [];
+    let now = 0;
+    vi.spyOn(performance, 'now').mockImplementation(() => now);
+    vi.stubGlobal('fetch', (url: string) => {
+      if (url.includes('status')) statusPolls.push(now);
+      return new Promise<Response>(() => {});
+    });
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
+    try {
+      render(<NetworkFix productionNote="note" />);
+      act(() => requestTarget('network', 'broken'));
+      await vi.waitFor(() => {
+        act(() => vi.advanceTimersByTime(100));
+        expect(statusPolls.length).toBeGreaterThan(0);
+      });
+      now = 25_000;
+      const before = statusPolls.length;
+      act(() => vi.advanceTimersByTime(1_000));
+      expect(statusPolls.length).toBe(before);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('disconnects its observers and timers on unmount', () => {
     const { unmount } = render(<NetworkFix productionNote="note" />);
     unmount();

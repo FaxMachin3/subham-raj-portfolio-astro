@@ -19,6 +19,7 @@ test.describe('homepage', () => {
     await waitForDemos(page);
     await expectNoHorizontalOverflow(page);
     for (const id of FIXES) await expect(page.getByTestId(`fix-${id}`)).toBeVisible();
+    await page.locator('#fixes').scrollIntoViewIfNeeded();
     await expect(page.getByTestId('hud')).toBeVisible();
     expect(errors).toEqual([]);
   });

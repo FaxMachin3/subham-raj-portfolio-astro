@@ -3,8 +3,11 @@ export const site = {
   role: 'Senior Frontend Engineer',
   /** Homepage <title>: name first, then the searches it should be found for (≤ 60 characters). */
   title: 'Subham Raj · Senior Frontend Engineer, React & Performance',
-  location: 'Bengaluru, India',
-  availability: 'Open to remote roles',
+  location: 'Bhubaneswar, India',
+  workMode: 'Remote · open to relocation',
+  availability: 'Available immediately',
+  /** Titles vary by company for the same level; the role above stays the one actually held. */
+  seeking: 'senior, staff or lead frontend roles',
   email: 'subhamraj4114@gmail.com',
   url: 'https://subhamraj.dev',
   description:

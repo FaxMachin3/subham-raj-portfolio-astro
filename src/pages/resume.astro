@@ -20,7 +20,7 @@ const roles = (await getCollection('experience')).sort((a, b) => b.data.start.lo
       <div>
         <h1>{site.name}</h1>
         <p class="resume__role">
-          {site.role} · {site.location} · {site.availability}
+          {site.role} · {site.location} · {site.workMode} · {site.availability}
         </p>
       </div>
       <a class="btn btn--solid" href={site.links.resumePdf} download>
@@ -30,7 +30,7 @@ const roles = (await getCollection('experience')).sort((a, b) => b.data.start.lo
     <p class="resume__summary">
       Senior frontend engineer with 8 years building data-heavy web apps in fintech, analytics and blockchain
       intelligence. I specialize in React and TypeScript performance, accessible design systems and AI product
-      UI, and I own features end to end.
+      UI, and I own features end to end. Open to {site.seeking}; {site.availability.toLowerCase()}.
     </p>
 
     <h2>Experience</h2>

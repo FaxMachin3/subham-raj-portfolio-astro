@@ -161,6 +161,56 @@ test.describe('whole-site runs', () => {
   });
 });
 
+test.describe('phones', () => {
+  test('the native header menu works without JavaScript', async ({ browser, page }) => {
+    const viewport = page.viewportSize()!;
+    test.skip(viewport.width > 720, 'the menu is shown on narrow screens');
+    const context = await browser.newContext({ javaScriptEnabled: false, viewport });
+    try {
+      const nativePage = await context.newPage();
+      await nativePage.goto('/');
+      const menu = nativePage.locator('[data-mobile-nav]');
+      await menu.locator('summary').click();
+      await expect(menu.getByRole('link', { name: 'Work', exact: true })).toBeVisible();
+      await menu.getByRole('link', { name: 'Work', exact: true }).click();
+      await expect(nativePage).toHaveURL(/#work$/);
+      await menu.locator('summary').click();
+      await expect(menu.getByRole('link', { name: 'Work', exact: true })).toBeHidden();
+    } finally {
+      await context.close();
+    }
+  });
+
+  test('the header menu reaches every section and email, and closes when a link is chosen', async ({
+    page,
+    isMobile,
+  }) => {
+    test.skip(page.viewportSize()!.width > 720, 'the menu replaces the header links on phones');
+    await page.goto('/');
+    await expect(page.locator('.site-nav')).toBeHidden();
+    const menu = page.locator('[data-mobile-nav]');
+    await tap(isMobile)(menu.getByText('Menu'));
+    for (const name of ['Work', 'The fixes', 'Experience', 'Résumé'])
+      await expect(menu.getByRole('link', { name, exact: true })).toBeVisible();
+    await expect(menu.getByRole('link', { name: 'Email' })).toHaveAttribute('href', /^mailto:/);
+    await tap(isMobile)(menu.getByRole('link', { name: 'Experience', exact: true }));
+    await expect(page).toHaveURL(/#experience$/);
+    await expect(menu).not.toHaveAttribute('open');
+  });
+
+  test('the health bar stays out of the way until the lab is on screen', async ({ page }) => {
+    test.skip(page.viewportSize()!.width > 720, 'on wider screens it is a small centred pill');
+    await page.goto('/');
+    await waitForDemos(page);
+    const hud = page.getByTestId('hud');
+    await expect(hud).toBeHidden();
+    await page.locator('#fixes').scrollIntoViewIfNeeded();
+    await expect(hud).toBeVisible();
+    await page.locator('#contact').scrollIntoViewIfNeeded();
+    await expect(hud).toBeHidden();
+  });
+});
+
 test.describe('honest counting', () => {
   test('a translation already in memory is not counted as a download', async ({ page, isMobile }) => {
     await page.goto('/');
@@ -222,10 +272,12 @@ test.describe('hiring structure', () => {
     await waitForDemos(page);
     await expect(page.locator('html')).toHaveAttribute('data-hud', 'collapsed');
     await expect(page.locator('#hud-cells')).toBeHidden();
+    await page.locator('#fixes').scrollIntoViewIfNeeded();
     await page.getByRole('button', { name: 'Show page health' }).click();
     await expect(page.locator('#hud-cells')).toBeVisible();
     await page.reload();
     await waitForDemos(page);
+    await page.locator('#fixes').scrollIntoViewIfNeeded();
     await expect(page.locator('html')).not.toHaveAttribute('data-hud', 'collapsed');
     await expect(page.locator('#hud-cells')).toBeVisible();
     await page.getByRole('button', { name: 'Hide page health' }).click();

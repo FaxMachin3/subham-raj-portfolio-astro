@@ -3,32 +3,56 @@ import { site } from '@/data/site';
 import ThemeSwitch from './ThemeSwitch.astro';
 
 const links = [
-  { href: '/#work', label: 'Work', desktopOnly: false, hideOnTiny: true },
-  { href: '/#fixes', label: 'The fixes', desktopOnly: true, hideOnTiny: true },
-  { href: '/#experience', label: 'Experience', desktopOnly: true, hideOnTiny: true },
-  { href: '/resume', label: 'Résumé', desktopOnly: false, hideOnTiny: false },
+  { href: '/#work', label: 'Work' },
+  { href: '/#fixes', label: 'The fixes' },
+  { href: '/#experience', label: 'Experience' },
+  { href: '/resume', label: 'Résumé' },
 ];
 ---
 
 <header class="site-header">
   <div class="wrap site-header__inner">
-    <a class="brand" href="/" aria-label={`${site.name}, home`}>
-      <span class="brand__word" aria-hidden="true">
-        subham<span class="brand__dot"></span>raj
+    {/* Named by its visible text, so speech input ("click subham raj") works; the space sits in the dot. */}
+    <a class="brand" href="/">
+      <span class="brand__word">
+        subham<span class="brand__dot"> </span>raj
       </span>
+      <span class="sr-only">(home)</span>
     </a>
-    <nav aria-label="Main">
+    <nav class="site-nav" aria-label="Main">
       <ul>
         {links.map((link) => (
-          <li class:list={{ 'desktop-only': link.desktopOnly, 'hide-tiny': link.hideOnTiny }}>
+          <li>
             <a href={link.href}>{link.label}</a>
           </li>
         ))}
       </ul>
     </nav>
+    {/* Phones: the same links plus email, behind one button, so nothing is hidden on small screens. */}
+    <details class="mobile-nav" data-mobile-nav>
+      <summary class="mobile-nav__button">Menu</summary>
+      <nav class="mobile-nav__panel" aria-label="Main">
+        <ul>
+          {links.map((link) => (
+            <li>
+              <a href={link.href}>{link.label}</a>
+            </li>
+          ))}
+          <li>
+            <a href={`mailto:${site.email}`}>Email</a>
+          </li>
+        </ul>
+      </nav>
+    </details>
     <ThemeSwitch />
   </div>
 </header>
+
+<script>
+  import { enhanceMobileNav } from '@/lib/mobile-nav';
+
+  enhanceMobileNav(document.querySelector<HTMLDetailsElement>('[data-mobile-nav]')!);
+</script>
 
 <style>
   .site-header {
@@ -66,6 +90,7 @@ const links = [
 
   /* The dot is a status light that mirrors the site: healthy, broken, fixing, fixed. */
   .brand__dot {
+    overflow: hidden;
     width: 0.34em;
     height: 0.34em;
     margin: 0 0.1em;
@@ -108,26 +133,33 @@ const links = [
     }
   }
 
-  nav {
+  .site-nav {
     margin-left: auto;
   }
 
   nav ul {
-    display: flex;
-    gap: var(--space-1);
     margin: 0;
     padding: 0;
     list-style: none;
   }
 
-  nav a {
+  .site-nav ul {
+    display: flex;
+    gap: var(--space-1);
+  }
+
+  nav a,
+  .mobile-nav__button {
     display: inline-flex;
     align-items: center;
     min-height: 44px;
     padding: 0 var(--space-3);
     border-radius: var(--radius-sm);
-    color: var(--color-muted);
     font-size: 0.9rem;
+  }
+
+  nav a {
+    color: var(--color-muted);
     text-decoration: none;
   }
 
@@ -136,26 +168,50 @@ const links = [
     background: var(--color-hover);
   }
 
+  .mobile-nav {
+    position: relative;
+    display: none;
+    margin-left: auto;
+  }
+
+  .mobile-nav__button {
+    border: 1px solid var(--color-line);
+    list-style: none;
+    cursor: pointer;
+  }
+
+  .mobile-nav__button::-webkit-details-marker {
+    display: none;
+  }
+
+  .mobile-nav__panel {
+    position: absolute;
+    top: calc(100% + var(--space-2));
+    right: 0;
+    min-width: 12rem;
+    padding: var(--space-2);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+  }
+
+  .mobile-nav__panel a {
+    display: flex;
+  }
+
   @media (max-width: 720px) {
-    .desktop-only {
+    .site-nav {
       display: none;
     }
 
-    nav a {
-      padding: 0 var(--space-2);
+    .mobile-nav {
+      display: block;
     }
   }
 
-  @media (max-width: 480px) {
+  @media (max-width: 400px) {
     .site-header__inner {
       gap: var(--space-2);
-    }
-  }
-
-  /* Smallest phones: the Work section is one scroll away, and the theme switch needs the room. */
-  @media (max-width: 400px) {
-    .hide-tiny {
-      display: none;
     }
 
     .brand__word {

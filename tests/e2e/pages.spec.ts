@@ -105,6 +105,7 @@ test.describe('case-study return history', () => {
       !(await page.evaluate(() => 'onpagereveal' in window)),
       'cross-document transitions are unsupported',
     );
+    if (page.viewportSize()!.width <= 720) await page.locator('[data-mobile-nav] summary').click();
     await page.locator('.site-header').getByRole('link', { name: 'Résumé', exact: true }).click();
     await expect(page).toHaveURL(/\/resume$/);
     await expect

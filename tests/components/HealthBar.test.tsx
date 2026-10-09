@@ -1,12 +1,35 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, render, screen } from '@testing-library/react';
 import HealthBar from '@/components/islands/HealthBar';
-import { addJsBytes, startSession } from '@/stores/fixes';
+import { $runActive, addJsBytes, startSession } from '@/stores/fixes';
 import { clearRequestLog, recordRequest } from '@/lab/requests';
+
+/** Lets a test say which observed sections are on screen. */
+let intersect: (entries: { target: Element; isIntersecting: boolean }[]) => void = () => {};
+const observed: Element[] = [];
+const ioDisconnect = vi.fn();
+
+beforeEach(() => {
+  observed.length = 0;
+  vi.stubGlobal(
+    'IntersectionObserver',
+    class {
+      constructor(cb: typeof intersect) {
+        intersect = cb;
+      }
+      observe(el: Element) {
+        observed.push(el);
+      }
+      disconnect = ioDisconnect;
+    },
+  );
+});
 
 afterEach(() => {
   cleanup();
+  document.body.innerHTML = '';
+  $runActive.set(false);
   vi.useRealTimers();
   vi.unstubAllGlobals();
   clearRequestLog();
@@ -142,5 +165,24 @@ describe('HealthBar', () => {
     render(<HealthBar />);
     expect(cell(/Long tasks/).querySelector('strong')!.textContent).toBe('n/a');
     expect(cell(/Layout shift/).getAttribute('data-level')).toBe('na');
+  });
+
+  it('steps aside away from the lab (phones hide it then), and comes back for the lab or a run', () => {
+    stubObservers([]);
+    const fixes = Object.assign(document.createElement('section'), { id: 'fixes' });
+    const results = Object.assign(document.createElement('section'), { id: 'results' });
+    document.body.append(fixes, results);
+    const { unmount } = render(<HealthBar />);
+    const hud = screen.getByTestId('hud');
+    expect(observed).toEqual([fixes, results]);
+    expect(hud.hasAttribute('data-offstage')).toBe(true);
+    act(() => intersect([{ target: fixes, isIntersecting: true }]));
+    expect(hud.hasAttribute('data-offstage')).toBe(false);
+    act(() => intersect([{ target: fixes, isIntersecting: false }]));
+    expect(hud.hasAttribute('data-offstage')).toBe(true);
+    act(() => $runActive.set(true));
+    expect(hud.hasAttribute('data-offstage')).toBe(false);
+    unmount();
+    expect(ioDisconnect).toHaveBeenCalled();
   });
 });

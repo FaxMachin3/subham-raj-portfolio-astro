@@ -56,7 +56,7 @@ describe('llms.txt', () => {
     expect(response.headers.get('Content-Type')).toContain('text/plain');
     expect(text).toMatch(/^# Subham Raj/);
     expect(text).toContain('https://subhamraj.dev/work/graph-performance');
-    expect(text).toContain('Previously at TRM Labs');
+    expect(text).toContain('Experience at TRM Labs');
   });
 });
 

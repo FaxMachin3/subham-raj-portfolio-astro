@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useStore } from '@nanostores/react';
-import { $jsBytes, $session } from '@/stores/fixes';
+import { $jsBytes, $runActive, $session } from '@/stores/fixes';
 import { observeLayoutShifts, observeLongTasks, support } from '@/lab/observers';
 import { requestsInLast } from '@/lab/requests';
 import { formatKB } from '@/lab/format';
@@ -53,6 +53,29 @@ function useSessionTotal(session: number, observe: (add: (value: number) => void
 }
 
 const HUD_KEY = 'hud';
+/** The sections the health bar reports on; on phones it only shows while one of them is on screen. */
+const LAB_SECTIONS = ['fixes', 'results'];
+
+/** True while any lab section intersects the viewport. */
+function useLabInView(): boolean {
+  const [inView, setInView] = useState(false);
+  useEffect(() => {
+    const visible = new Set<Element>();
+    const observer = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) visible.add(entry.target);
+        else visible.delete(entry.target);
+      }
+      setInView(visible.size > 0);
+    });
+    for (const id of LAB_SECTIONS) {
+      const section = document.getElementById(id);
+      if (section) observer.observe(section);
+    }
+    return () => observer.disconnect();
+  }, []);
+  return inView;
+}
 
 /**
  * Live page health. Every value is measured in this tab: nothing is shown until there is a real sample,
@@ -62,6 +85,8 @@ export default function HealthBar() {
   const hydrated = useHydrated();
   const session = useStore($session);
   const jsBytes = useStore($jsBytes);
+  const runActive = useStore($runActive);
+  const labInView = useLabInView();
   const [fps, setFps] = useState<number | null>(null);
   const [reqLastMinute, setReqLastMinute] = useState(0);
   // The head script applies a saved preference before first paint; once hydrated, read it from <html>.
@@ -130,6 +155,7 @@ export default function HealthBar() {
   return (
     <aside
       className="hud"
+      data-offstage={(!labInView && !runActive) || undefined}
       aria-label="Live page health, measured in this tab since the last full break or fix run"
       data-testid="hud"
     >

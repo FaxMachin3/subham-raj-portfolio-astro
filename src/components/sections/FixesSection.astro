@@ -15,7 +15,6 @@ const bundleCut = requireMetric('bundleCut');
 const slowRequest = optionalMetric('slowRequest');
 const polling = optionalMetric('polling');
 const adoption = requireMetric('designSystemAdoption');
-const migration = optionalMetric('designSystemMigration');
 
 const notes = {
   plot: `In production at TRM Labs: ${plotMatching.label} went from ${plotMatching.value} after a ${perfPrs.value} PR push I led.`,
@@ -25,7 +24,7 @@ const notes = {
     slowRequest && polling
       ? `At TRM Labs: a ${slowRequest.value} request moved off the entity page’s initial load, and polling went from ${polling.value}.`
       : 'At TRM Labs: slow requests were deferred until needed, and polling backed off.',
-  a11y: `At TRM Labs: an accessible Radix + Tailwind design system (${adoption.value.charAt(0).toLowerCase()}${adoption.value.slice(1)} is built on it${migration ? `, ${migration.value} of existing screens migrated` : ''}) and keyboard tables for a government contract.`,
+  a11y: `At TRM Labs: an accessible Radix + Tailwind design system (${adoption.value.charAt(0).toLowerCase()}${adoption.value.slice(1)} is built on it) and keyboard tables for a government contract.`,
 };
 ---
 
@@ -68,7 +67,6 @@ const notes = {
     border-radius: var(--radius-lg);
     background: var(--color-night);
     color: #e9e9e4;
-    box-shadow: 0 24px 48px -32px rgb(0 0 0 / 0.55);
   }
 
   .lab__eyebrow {
@@ -104,7 +102,6 @@ const notes = {
   /* Labels may wrap (larger text, spacing overrides); stretching keeps the two buttons the same height. */
   .lab :global(.controls) {
     align-items: stretch;
-    align-content: start;
   }
 
   /* Side by side only where "Let Subham fix it" fits on one line; else stacked, so labels never re-wrap. */

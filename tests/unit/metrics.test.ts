@@ -34,8 +34,4 @@ describe('metrics guard', () => {
     expect(unbreakable('30 req/s → ~3 req/min')).toBe('30\u00a0req/s → ~3\u00a0req/min');
     expect(unbreakable('All new UI')).toBe('All new UI');
   });
-
-  it('keeps the unconfirmed migration figure unpublished until it is approved', () => {
-    expect(metrics.designSystemMigration.approved).toBe(false);
-  });
 });
