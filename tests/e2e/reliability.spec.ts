@@ -176,6 +176,12 @@ test.describe('phones', () => {
       await expect(nativePage).toHaveURL(/#work$/);
       await menu.locator('summary').click();
       await expect(menu.getByRole('link', { name: 'Work', exact: true })).toBeHidden();
+      await menu.locator('summary').click();
+      await nativePage.setViewportSize({ width: 1024, height: 768 });
+      await expect(nativePage.locator('.site-nav')).toBeVisible();
+      expect(await nativePage.evaluate(() => getComputedStyle(document.documentElement).overflow)).not.toBe(
+        'hidden',
+      );
     } finally {
       await context.close();
     }
@@ -189,10 +195,10 @@ test.describe('phones', () => {
     await page.goto('/');
     await expect(page.locator('.site-nav')).toBeHidden();
     const menu = page.locator('[data-mobile-nav]');
-    await tap(isMobile)(menu.getByText('Menu'));
+    await tap(isMobile)(menu.locator('summary'));
     for (const name of ['Work', 'The fixes', 'Experience', 'Résumé'])
       await expect(menu.getByRole('link', { name, exact: true })).toBeVisible();
-    await expect(menu.getByRole('link', { name: 'Email' })).toHaveAttribute('href', /^mailto:/);
+    await expect(menu.getByRole('link', { name: 'Email me' })).toHaveAttribute('href', /^mailto:/);
     await tap(isMobile)(menu.getByRole('link', { name: 'Experience', exact: true }));
     await expect(page).toHaveURL(/#experience$/);
     await expect(menu).not.toHaveAttribute('open');

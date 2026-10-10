@@ -62,13 +62,22 @@ export function transitionTheme(
   const root = doc.documentElement;
   root.classList.add('theme-transition');
   const transition = doc.startViewTransition(apply);
-  void transition.ready.then(() =>
-    root.animate(
-      { clipPath: [`circle(0 at ${x}px ${y}px)`, `circle(${radius}px at ${x}px ${y}px)`] },
-      { duration: 480, easing: 'cubic-bezier(0.3, 1, 0.4, 1)', pseudoElement: '::view-transition-new(root)' },
-    ),
-  );
-  void transition.finished.finally(() => root.classList.remove('theme-transition'));
+  void transition.ready
+    .then(() =>
+      root.animate(
+        { clipPath: [`circle(0 at ${x}px ${y}px)`, `circle(${radius}px at ${x}px ${y}px)`] },
+        {
+          duration: 480,
+          easing: 'cubic-bezier(0.3, 1, 0.4, 1)',
+          pseudoElement: '::view-transition-new(root)',
+        },
+      ),
+    )
+    .catch(() => {
+      // Navigation can abort the transition before ready or invalidate its pseudo-elements afterwards.
+    });
+  const cleanup = () => root.classList.remove('theme-transition');
+  void transition.finished.then(cleanup, cleanup);
 }
 
 /**

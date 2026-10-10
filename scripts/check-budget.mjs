@@ -15,7 +15,8 @@ const DIST = fileURLToPath(new URL('../dist/', import.meta.url));
 // js: 90 KB until it also counted inline scripts (~4.6 KB); 100 KB covers them plus the failure, cancellation
 // and retry handling added to the demos. synthetic: the bundle demo's generated chunks, which are big on
 // purpose (they are the problem it demonstrates); capped only to catch accidental growth.
-const BUDGET_KB = { js: 100, lab: 15, synthetic: 320, css: 10, fonts: 70 };
+// The full-screen phone navigation adds ~0.3 KB compressed CSS. Keep a bounded 0.5 KB allowance.
+const BUDGET_KB = { js: 100, lab: 15, synthetic: 320, css: 10.5, fonts: 70 };
 const FONT_URI = /url\(\s*["']?data:font\/woff2;base64,[^)"']+["']?\s*\)/g;
 
 const html = await readFile(join(DIST, 'index.html'), 'utf8');

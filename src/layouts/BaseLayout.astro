@@ -44,16 +44,16 @@ const ogAlt = title ?? site.title;
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light dark" />
-    <script is:inline>
-      document.documentElement.dataset.hud = 'collapsed';
-      try {
-        const theme = localStorage.getItem('theme');
-        if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme;
-        if (localStorage.getItem('hud') === 'expanded') delete document.documentElement.dataset.hud;
-      } catch {}
-    </script>
-    {/* Keep a themed canvas before the external stylesheet arrives. Never hide content. */}
+    {/* Opt in before any script can trigger the initial reveal; keep the canvas themed before CSS loads. */}
     <style is:inline>
+      @view-transition {
+        navigation: auto;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        @view-transition {
+          navigation: none;
+        }
+      }
       html {
         color-scheme: light dark;
         background: #f5f4ef;
@@ -71,6 +71,14 @@ const ogAlt = title ?? site.title;
         background: #121211;
       }
     </style>
+    <script is:inline>
+      document.documentElement.dataset.hud = 'collapsed';
+      try {
+        const theme = localStorage.getItem('theme');
+        if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme;
+        if (localStorage.getItem('hud') === 'expanded') delete document.documentElement.dataset.hud;
+      } catch {}
+    </script>
     <script is:inline>
       // Native history remains in charge. A rebuilt page may need its position
       // corrected after WebKit clamps the offset to partially parsed HTML.
@@ -169,12 +177,23 @@ const ogAlt = title ?? site.title;
         },
         { once: true },
       );
+      // The outgoing transition is a different object from the incoming one. It can be aborted when
+      // the document becomes hidden or loses its cross-document opt-in during navigation.
+      addEventListener('pageswap', (e) => {
+        if (!e.viewTransition) return;
+        e.viewTransition.ready.catch(() => {});
+        e.viewTransition.finished.catch(() => {});
+      });
       // Going back to the homepage is the shorter, closing transition (global.css reads data-vt-dir).
       addEventListener('pagereveal', (e) => {
         if (!e.viewTransition) return;
+        // Skipping an incoming fragment transition is intentional when its target is not parsed yet.
+        // `ready` rejects on skip, even though navigation and `finished` still complete normally.
+        e.viewTransition.ready.catch(() => {});
         const root = document.documentElement;
         root.dataset.vtDir = location.pathname === '/' ? 'return' : 'open';
-        e.viewTransition.finished.finally(() => delete root.dataset.vtDir);
+        const cleanup = () => delete root.dataset.vtDir;
+        e.viewTransition.finished.then(cleanup, cleanup);
       });
       // Smooth scrolling starts once the page (and any jump to its #fragment) has loaded; see global.css.
       addEventListener(

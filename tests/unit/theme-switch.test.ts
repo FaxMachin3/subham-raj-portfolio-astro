@@ -78,6 +78,50 @@ describe('theme transition', () => {
     expect(document.documentElement.classList.contains('theme-transition')).toBe(false);
   });
 
+  it('keeps the theme applied and cleans up when the transition is skipped before ready', async () => {
+    const animate = vi.fn();
+    document.documentElement.animate = animate;
+    const ready = Promise.reject(new DOMException('Transition was skipped', 'AbortError'));
+    (document as { startViewTransition?: unknown }).startViewTransition = (update: () => void) => {
+      update();
+      return { ready, finished: Promise.resolve() };
+    };
+    transitionTheme('dark', cycle());
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(animate).not.toHaveBeenCalled();
+    expect(document.documentElement.dataset.theme).toBe('dark');
+    expect(document.documentElement.classList.contains('theme-transition')).toBe(false);
+  });
+
+  it('cleans up when an invalid-state abort rejects ready and finished', async () => {
+    const error = new DOMException('ViewTransition opt-in disabled', 'InvalidStateError');
+    (document as { startViewTransition?: unknown }).startViewTransition = (update: () => void) => {
+      update();
+      return { ready: Promise.reject(error), finished: Promise.reject(error) };
+    };
+    transitionTheme('light', cycle());
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(document.documentElement.dataset.theme).toBe('light');
+    expect(document.documentElement.classList.contains('theme-transition')).toBe(false);
+  });
+
+  it('cleans up when the pseudo-element becomes invalid after ready', async () => {
+    document.documentElement.animate = vi.fn(() => {
+      throw new DOMException('Transition no longer active', 'InvalidStateError');
+    });
+    (document as { startViewTransition?: unknown }).startViewTransition = (update: () => void) => {
+      update();
+      return { ready: Promise.resolve(), finished: Promise.resolve() };
+    };
+    transitionTheme('dark', cycle());
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(document.documentElement.dataset.theme).toBe('dark');
+    expect(document.documentElement.classList.contains('theme-transition')).toBe(false);
+  });
+
   it('switches instantly under reduced motion, even with view transitions', () => {
     reducedMotion(true);
     const start = vi.fn();
