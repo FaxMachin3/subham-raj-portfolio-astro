@@ -87,9 +87,18 @@ const links = [
     position: sticky;
     top: 0;
     z-index: 40;
+    border-bottom: 1px solid var(--color-line);
+  }
+
+  /* Blur the header's own layer without making it a containing block for the fixed menu. */
+  .site-header::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
     background: var(--color-header-bg);
     backdrop-filter: blur(8px);
-    border-bottom: 1px solid var(--color-line);
+    pointer-events: none;
   }
 
   .site-header__inner {
@@ -293,10 +302,6 @@ const links = [
 
     .mobile-nav {
       display: block;
-    }
-    .site-header:has(.mobile-nav[open]) {
-      backdrop-filter: none;
-      background: transparent;
     }
     .site-header:has(.mobile-nav[open]) .brand,
     .mobile-nav__button,

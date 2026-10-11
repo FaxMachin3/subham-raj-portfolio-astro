@@ -22,7 +22,22 @@ for (const theme of ['light', 'dark'] as const) {
       const box = (await summary.boundingBox())!;
       await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);
     };
-    await toggle();
+    const opening = await page.evaluate(() => {
+      document.querySelector<HTMLElement>('[data-mobile-nav] summary')!.click();
+      const animation = document.querySelector<HTMLElement>('.mobile-nav__panel')!.getAnimations()[0]!;
+      animation.pause();
+      return [0, 190, 379].map((time) => {
+        animation.currentTime = time;
+        const layer = getComputedStyle(document.querySelector('.site-header')!, '::before');
+        return { opacity: layer.opacity, blur: layer.backdropFilter, background: layer.backgroundColor };
+      });
+    });
+    for (const frame of opening) {
+      expect(frame.opacity).toBe('1');
+      expect(frame.blur).toBe('blur(8px)');
+      expect(frame.background).not.toBe('rgba(0, 0, 0, 0)');
+    }
+    await menu.locator('.mobile-nav__panel').evaluate((element) => element.getAnimations()[0]!.play());
     await expect(summary).toHaveAttribute('aria-expanded', 'true');
     await expect(menu.getByRole('link', { name: 'Work', exact: true })).toBeFocused();
     await expectNoHorizontalOverflow(page);
@@ -37,7 +52,36 @@ for (const theme of ['light', 'dark'] as const) {
       element.scrollTop = 100;
     });
     expect(await page.evaluate(() => scrollY)).toBe(before);
-    await page.keyboard.press('Escape');
+    // Inspect the closing animation before it settles: the header must already be blurred,
+    // while the fixed panel keeps its viewport bounds and the background remains locked.
+    const closing = await page.evaluate(() => {
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      const header = document.querySelector<HTMLElement>('.site-header')!;
+      const panel = document.querySelector<HTMLElement>('.mobile-nav__panel')!;
+      const animation = panel.getAnimations()[0]!;
+      animation.pause();
+      animation.currentTime = 130;
+      const layer = getComputedStyle(header, '::before');
+      const bounds = panel.getBoundingClientRect();
+      return {
+        opacity: layer.opacity,
+        blur: layer.backdropFilter,
+        background: layer.backgroundColor,
+        headerBlur: getComputedStyle(header).backdropFilter,
+        top: Math.round(bounds.top),
+        height: Math.round(bounds.height),
+        viewportHeight: innerHeight,
+        overflow: getComputedStyle(document.documentElement).overflow,
+      };
+    });
+    expect(closing.opacity).toBe('1');
+    expect(closing.blur).toBe('blur(8px)');
+    expect(closing.background).not.toBe('rgba(0, 0, 0, 0)');
+    expect(closing.headerBlur).toBe('none');
+    expect(closing.top).toBe(0);
+    expect(closing.height).toBe(closing.viewportHeight);
+    expect(closing.overflow).toBe('hidden');
+    await panel.evaluate((element) => element.getAnimations()[0]!.play());
     await expect(menu).not.toHaveAttribute('open');
     await expect(summary).toBeFocused();
     expect(await page.evaluate(() => scrollY)).toBe(before);
