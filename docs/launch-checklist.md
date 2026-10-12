@@ -1,5 +1,23 @@
 # Launch checklist
 
+## Current setup (12 October 2026)
+
+- The domain is registered with Cloudflare and the site is deployed from
+  `FaxMachin3/subham-raj-portfolio-astro` to Cloudflare Pages.
+- Both `subhamraj.dev` and `www.subhamraj.dev` have proxied CNAME records pointing to
+  `subham-raj-portfolio-astro.pages.dev` and are associated with the Pages project. Keep both DNS records
+  and both custom-domain associations.
+- An active Single Redirect sends `www` to `https://subhamraj.dev`, preserving paths and query strings.
+- An active Bulk Redirect sends only the production `subham-raj-portfolio-astro.pages.dev` hostname to
+  the main domain. Preview subdomains are excluded.
+- DNSSEC validates publicly. Cloudflare manages the signing keys and registry DS record.
+- `hello@subhamraj.dev` forwards to the verified Gmail destination; delivery was tested by the owner.
+  Forwarding does not configure replies from the branded address.
+- Search Console ownership is verified. Sitemap submission is deferred while its report still shows
+  a fetch failure; a live Google test successfully accessed the sitemap. Resume this task later.
+- The repository already supplies `404.html` through `src/pages/404.astro`; missing paths return 404.
+  Cloudflare's separate Custom Errors feature requires a paid plan and is not needed for this page.
+
 Everything here happens in your own accounts. Do it in order; each step lists how to confirm it worked.
 Budget about ₹1,400 a year for the domain; everything else is free.
 
@@ -26,7 +44,7 @@ Budget about ₹1,400 a year for the domain; everything else is free.
 
 1. **Workers & Pages → Create → Pages → Connect to Git**, and pick the repository.
 2. Framework preset **Astro**, build command `npm run build`, output directory `dist`.
-   Under _Environment variables_ set `NODE_VERSION` = `22`.
+   Under _Environment variables_ set `NODE_VERSION` = `24` (the package requires Node >= 22.22.0).
 3. After the first deploy: **Custom domains → Set up a custom domain → `subhamraj.dev`**. Add
    `www.subhamraj.dev` too.
 4. `public/_headers` sets caching and security headers automatically.
@@ -38,18 +56,17 @@ Budget about ₹1,400 a year for the domain; everything else is free.
 Cloudflare Pages' `_redirects` file cannot redirect between domains, so use **Bulk Redirects**
 (account level → _Bulk Redirects_):
 
-| Source               | Target                  | Status | Options                                                       |
-| -------------------- | ----------------------- | ------ | ------------------------------------------------------------- |
-| `www.subhamraj.dev`  | `https://subhamraj.dev` | 301    | preserve query string, subpath matching, preserve path suffix |
-| `shubhamraj.dev`     | `https://subhamraj.dev` | 301    | same                                                          |
-| `www.shubhamraj.dev` | `https://subhamraj.dev` | 301    | same                                                          |
+| Source                          | Target                  | Status | Options                                                       |
+| ------------------------------- | ----------------------- | ------ | ------------------------------------------------------------- |
+| `www.subhamraj.dev`             | `https://subhamraj.dev` | 301    | preserve query string, subpath matching, preserve path suffix |
+| `shubhamraj.dev` (if owned)     | `https://subhamraj.dev` | 301    | same                                                          |
+| `www.shubhamraj.dev` (if owned) | `https://subhamraj.dev` | 301    | same                                                          |
 
-For the old domain, add it to Cloudflare first (it can stay registered at Namecheap: change its
+Only if you own an old domain and want to migrate it, add it to Cloudflare first (it can stay registered at Namecheap: change its
 nameservers to the two Cloudflare gives you), then add proxied DNS records (`A @ 192.0.2.1`,
 `A www 192.0.2.1`) so the redirect rule can catch its traffic.
 
-Before 30 March 2027, transfer the old domain to Cloudflare as well (about $12.20, which includes a year of
-renewal).
+Any registrar transfer is optional; check that domain's actual renewal date and current transfer price.
 
 **Check:** `curl -I https://shubhamraj.dev/anything` returns `301` with `location:
 https://subhamraj.dev/anything`.
@@ -58,7 +75,7 @@ https://subhamraj.dev/anything`.
 
 1. **Google Search Console:** add a _Domain_ property for `subhamraj.dev` (verify with the DNS record it
    gives you; Cloudflare can add it in one click). Submit `https://subhamraj.dev/sitemap-index.xml`.
-2. Add the old domain as a property too, then use **Settings → Change of address** to tell Google it moved.
+2. If migrating an old domain you own, add it as a property too, then use **Settings → Change of address** to tell Google it moved.
    This needs the 301s from step 4 in place.
 3. **Bing Webmaster Tools:** _Import from Google Search Console_. Bing also powers ChatGPT search.
 4. Test the homepage and one case study in the **Rich Results Test** (`search.google.com/test/rich-results`)
@@ -67,14 +84,14 @@ https://subhamraj.dev/anything`.
 **Check:** Search Console shows the sitemap as _Success_ within a day or two; pages appear under _Pages →
 Indexed_ over the following weeks.
 
-## 6. Email: hi@subhamraj.dev
+## 6. Email: hello@subhamraj.dev
 
 1. Cloudflare dashboard → the domain → **Email → Email Routing → Get started**.
-2. Create `hi@subhamraj.dev` → forward to your Gmail, and confirm the verification email.
+2. Create `hello@subhamraj.dev` → forward to your Gmail, and confirm the verification email.
 3. Then change `email` in `src/data/site.ts` and push. The site, structured data and `llms.txt` all update
    from that one value.
 
-**Check:** an email to hi@subhamraj.dev arrives in Gmail.
+**Check:** an email to hello@subhamraj.dev from another account arrives in Gmail.
 
 ## 7. Analytics (optional, privacy-friendly)
 

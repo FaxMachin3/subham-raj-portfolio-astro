@@ -8,7 +8,7 @@ export const site = {
   availability: 'Available immediately',
   /** Titles vary by company for the same level; the role above stays the one actually held. */
   seeking: 'senior, staff or lead frontend roles',
-  email: 'subhamraj4114@gmail.com',
+  email: 'hello@subhamraj.dev',
   url: 'https://subhamraj.dev',
   description:
     'Subham Raj is a senior frontend engineer: 8 years of React and TypeScript, building data-heavy and AI product interfaces that are fast and accessible. Break this site, then watch him fix it.',
