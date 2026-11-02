@@ -10,7 +10,7 @@ const posts = [
 for (const { slug, related } of posts) {
   test(`published article: ${slug}`, async ({ page, request }) => {
     const path = `/writing/${slug}`;
-    await page.goto('/');
+    await page.goto('/#writing');
     const link = page.locator(`#writing a[href="${path}"]`);
     await expect(link).toHaveCount(1);
     await link.click();
@@ -52,6 +52,12 @@ for (const { slug, related } of posts) {
     expect(png.readUInt32BE(20)).toBe(630);
     const sitemap = await (await request.get('/sitemap-0.xml')).text();
     expect(sitemap).toContain(`<loc>https://subhamraj.dev${path}</loc>`);
+    await page.getByRole('link', { name: '← All writing', exact: true }).click();
+    await expect(page).toHaveURL(/\/#writing$/);
+  });
+
+  test(`${slug}: direct visit returns to Writing`, async ({ page }) => {
+    await page.goto(`/writing/${slug}`);
     await page.getByRole('link', { name: '← All writing', exact: true }).click();
     await expect(page).toHaveURL(/\/#writing$/);
   });
