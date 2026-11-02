@@ -1,82 +1,121 @@
 ---
-title: 'Fixing a 15-second graph freeze with one memoized lookup'
-description: 'How a scan hidden inside a loop froze an investigation graph for 15.5 seconds, and how memoizing indexes in a Map took it to 14 ms on 1,600 elements.'
-published: 2026-10-04
-updated: 2026-10-04
+title: 'Fixing a 15-second graph freeze with an indexed lookup'
+description: 'A historical graph-performance result, the repeated-scan problem behind it, and a synthetic demo that compares scans with a Map index.'
+published: 2026-11-02
+updated: 2026-11-02
 tags: [performance, react, javascript]
-draft: true
+draft: false
 related: graph-performance
 ---
 
-At TRM Labs, plotting a large investigation on the graph froze the page. On 1,600 elements, plot matching
-took **15.5 seconds**. After one change, it took **14 ms**. The change was small; finding it was the work.
+My [graph-performance case study](/work/graph-performance) records a plot-matching improvement from
+**15.5 seconds to 14 milliseconds on 1,600 elements**. Those are historical figures carried from my résumé
+into this portfolio's approved metrics registry. They describe plot matching, not total graph rendering
+or end-to-end page responsiveness.
 
-## The shape of the bug
+The public repository does not include the original profile, dataset, hardware details or repeated-run
+measurements. I cannot reproduce that exact result from this repository. What I can show is the
+algorithmic problem and a synthetic demonstration of the same class of fix.
 
-Plotting worked through the incoming elements one at a time (simplified here). For each one, it needed to know whether that
-element was already on the graph, and where:
+## The shape of the problem
 
-```ts
-const plotted: Element[] = [];
-for (const incoming of elements) {
-  const index = plotted.findIndex((p) => p.id === incoming.id); // scans everything plotted so far
-  if (index === -1) plotted.push(incoming);
-  else plotted[index] = { ...plotted[index], ...incoming };
-}
-```
-
-Nothing here looks slow, and on small graphs it isn't. But `findIndex` is a loop. Inside the outer loop it
-runs up to n times for each of n elements, so the total work grows with n². Double the graph and plotting
-takes four times as long. The biggest investigations, the ones that matter most, hit it hardest.
-
-## The fix
-
-Remember where each element went, so finding it again is a lookup instead of a search:
+Suppose incoming records need to be merged by ID while preserving their first-seen order. A simple
+implementation searches the output accumulated so far for each incoming record:
 
 ```ts
-const plotted: Element[] = [];
-const indexById = new Map<string, number>();
-for (const incoming of elements) {
-  const index = indexById.get(incoming.id); // O(1)
-  if (index === undefined) {
-    indexById.set(incoming.id, plotted.length);
-    plotted.push(incoming);
-  } else {
-    plotted[index] = { ...plotted[index], ...incoming };
+type GraphItem = { id: string; x: number; y: number };
+
+function mergeByScan(elements: readonly GraphItem[]): GraphItem[] {
+  const plotted: GraphItem[] = [];
+  for (const incoming of elements) {
+    const index = plotted.findIndex((p) => p.id === incoming.id);
+    if (index === -1) plotted.push({ ...incoming });
+    else plotted[index] = { ...plotted[index], ...incoming };
   }
+  return plotted;
 }
 ```
 
-Same output, same order, linear work. On 1,600 elements: 15.5 s → 14 ms.
+These are standalone teaching examples, not production source code. They contain no customer data or
+product-specific graph logic.
 
-## How to spot it
+For n distinct IDs, the scans perform 0 + 1 + … + (n − 1) comparisons, or n(n − 1)/2. That is quadratic
+work. Doubling a sufficiently large, mostly unique input roughly quadruples the comparison count, not
+necessarily elapsed time. Duplicates, object sizes, JIT compilation and garbage collection affect timings.
 
-The profiler pointed at plot matching, not at rendering. That is the useful habit: before changing
-anything, find where the time actually goes. When a hot function has a callback-taking array method
-(`find`, `findIndex`, `filter`, `includes`) inside a loop over the same data, ask whether a `Map` or `Set`
-built once would answer the question in one step.
+## Build an index while merging
 
-## The same class of bug, earlier
+Store each ID's output position as it is first encountered:
 
-When the graph still ran on ReGraph, a plotting step built its result in a `reduce` that spread the
-accumulator into a fresh copy on every iteration:
+```ts
+function mergeByIndex(elements: readonly GraphItem[]): GraphItem[] {
+  const plotted: GraphItem[] = [];
+  const indexById = new Map<string, number>();
+  for (const incoming of elements) {
+    const index = indexById.get(incoming.id);
+    if (index === undefined) {
+      indexById.set(incoming.id, plotted.length);
+      plotted.push({ ...incoming });
+    } else {
+      plotted[index] = { ...plotted[index], ...incoming };
+    }
+  }
+  return plotted;
+}
+```
+
+Check `index === undefined`, not `!index`: zero is a valid position. Both versions retain first-seen ID
+order and let later records replace earlier field values. They make shallow copies and do not mutate
+the input records.
+
+With expected constant-time `Map` access and fixed-size records, this is expected linear work, using
+additional memory proportional to the number of distinct IDs. JavaScript requires average sublinear
+access for a `Map`, not a universal worst-case O(1) guarantee; see the
+[Map reference](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map).
+
+This is an index local to one operation, not React `useMemo`. If the output is reordered, spliced or kept
+across calls, its positions can become stale. Rebuild or maintain the index when those assumptions change.
+
+## Profile before replacing loops
+
+The historical case study attributes the bottleneck to plot matching. The general debugging habit is to
+measure the expensive phase first, then inspect repeated searches or copies inside its loops. A nested
+`findIndex` is a useful lead, not proof that it dominates the application.
+
+A related trap is rebuilding an object with a spread on every iteration:
 
 ```ts
 const byId = items.reduce((acc, item) => ({ ...acc, [item.id]: item }), {});
 ```
 
-Each step copies everything collected so far, so it is quadratic too, with an allocation per element on
-top. Reusing the same accumulator removed the copy:
+For distinct keys, each step copies an increasingly large accumulator. A local `Map` avoids that repeated
+copy and safely accommodates arbitrary string keys:
 
 ```ts
-const byId = items.reduce<Record<string, Item>>((acc, item) => {
-  acc[item.id] = item;
-  return acc;
-}, {});
+const byId = new Map<string, GraphItem>();
+for (const item of items) byId.set(item.id, item);
 ```
 
-## Try it
+This changes the result type from an object to a `Map`, so callers must use `get` rather than property
+access. Mutation of a newly created local accumulator is different from mutating shared application state.
 
-The homepage re-creates the bug live. Press **Break** on the first card and the broken version runs
-in your browser, calibrated to freeze for a second or two on your device. Press **Fix** and the memoized
-version plots the same graph in milliseconds. Both timings are measured on your machine.
+## What the live demo measures
+
+[Fix 01 on the homepage](/#fixes) generates deterministic synthetic nodes with some duplicate IDs. Both
+implementations merge the same records. Timings wrap the merge function; they exclude node generation
+and canvas drawing.
+
+Normally, the demo calibrates the record count toward roughly 1–2 seconds of work for the slow version.
+The count is bounded, and the target is approximate. With reduced motion enabled, it skips calibration
+and uses 1,600 records. The displayed count and timings belong to that browser session. They are not a
+reproduction of the historical 15.5-second result or a promise that the fast path always finishes within
+a particular frame budget. The Break control deliberately runs blocking work.
+
+To compare the public algorithms, use the same seed and record count for both, verify equal outputs,
+warm up both paths, and collect several samples while alternating their order. Report the environment,
+input size and timing spread. Keep input generation and rendering outside the measured merge phase.
+
+The repository's plot tests check equal output, duplicate handling, order and input preservation. Those
+are correctness checks. Timing comparisons are environment-sensitive and cannot validate the historical
+production result. The transferable lesson is to remove repeated work after profiling, while preserving
+the behavior users depend on.

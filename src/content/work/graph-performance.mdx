@@ -7,7 +7,7 @@ role: Led the performance push
 stack: [React, TypeScript, KeyLines, ReGraph, Chrome DevTools]
 metrics: [plotMatching, perfPrs]
 published: 2026-10-04
-updated: 2026-10-04
+updated: 2026-11-02
 order: 1
 ---
 
@@ -31,7 +31,7 @@ are the most important ones. They were also the ones that froze: plot matching o
 **Profile before changing anything.** Profiling pointed at plot matching: to find where each incoming
 element belonged, an inner loop scanned every element already plotted. With n elements that is up to n
 steps per element, quadratic work on the main thread. I memoized each element's index in a `Map` as it was
-plotted, so every lookup became O(1). That change alone took 1,600 elements from 15.5 s to 14 ms, with
+plotted, so lookups took expected constant time. That change alone took 1,600 elements from 15.5 s to 14 ms, with
 identical output.
 
 **Many small PRs, not one rewrite.** I led a series of more than 20 PRs. Each was reviewable, measurable
@@ -53,6 +53,11 @@ browser-isolated environment; removing that content fixed it.
 
 - Plot matching on 1,600 elements: **15.5 s → 14 ms**, roughly 1,100× faster.
 - Large investigations stay interactive instead of freezing the page.
+
+These are historical résumé figures, recorded in the portfolio's approved metrics registry. The public
+repository does not include the original profile, dataset or benchmark environment, so its synthetic
+demo does not independently reproduce them. The timings describe plot matching, not end-to-end rendering.
+See [the indexed-lookup article](/writing/memoized-index-lookups) for the algorithm and measurement limits.
 
 ## What I'd do next
 
