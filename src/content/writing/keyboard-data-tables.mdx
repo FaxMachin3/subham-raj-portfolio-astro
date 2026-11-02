@@ -1,60 +1,99 @@
 ---
 title: 'Keyboard data tables: rows, headers and cells, one Tab stop'
-description: 'A keyboard model for data tables that keeps one Tab stop, moves by row, header or cell, sorts with Enter and still reads well in a screen reader.'
-published: 2026-10-04
-updated: 2026-10-04
+description: 'Inside a custom table demo: roving focus, row and cell navigation, sorting, and the limits of automated accessibility checks.'
+published: 2026-11-02
+updated: 2026-11-02
 tags: [accessibility, react, design-systems]
-draft: true
+draft: false
 related: design-system
 ---
 
-Data tables are where many products quietly stop working for keyboard users. Clickable `div`s, actions
-that only appear on hover, and twenty Tab stops per row are all common. At TRM Labs I built keyboard-first
-data tables for a government contract; this post walks through the model behind the Fix 05 demo on my
-homepage, which you can try right there.
+A table can look complete while leaving keyboard users unable to sort a column or open an action menu.
+My [design-system work](/work/design-system) included keyboard-first tables. This article explains the
+small, synthetic table in [Fix 05 on the homepage](/#fixes), including where its custom interaction model
+needs more validation before reuse. It describes the public demo, not an employer's implementation.
 
-## One Tab stop for the whole table
+## Choose the interaction model first
 
-Tab should move between components, not between every cell. The table gets a single Tab stop using a
-_roving tabindex_: exactly one element inside it has `tabindex="0"`, and every other row, header and cell
-has `tabindex="-1"`. Arrow keys move that one tab stop around. Tab leaves the table and Shift+Tab comes
-back to the same place.
+A static HTML table does not need every cell to be focusable. Screen readers already provide table
+navigation, and ordinary links and buttons can stay in the page's Tab sequence. For a sortable table,
+buttons inside column headers are a good starting point.
+
+A spreadsheet-like widget has different needs. The [WAI-ARIA grid pattern](https://www.w3.org/WAI/ARIA/apg/patterns/grid/)
+uses one entry in the Tab sequence and author-managed navigation inside the widget. That comes with
+keyboard and semantic responsibilities; adding arrow-key handlers alone does not make a table an ARIA grid.
+
+The portfolio demo explores a custom model: native table semantics with focus that can move between
+whole rows, headers and cells. It is not a reference implementation of the APG grid pattern or a blanket
+recommendation for data tables.
+
+## One Tab stop inside the table
+
+The demo uses _roving tabindex_: one row, header or cell has `tabindex="0"`; the other navigation targets
+have `tabindex="-1"`. A handled navigation key updates that state and moves DOM focus to the new target.
+Changing the attribute alone would not move focus.
+
+Tab leaves the table. Returning with Shift+Tab from the next focusable control reaches the retained tab
+stop, provided the table has not changed. The Filter, Export and More actions controls are separate Tab
+stops outside the table. “One Tab stop” describes the table's navigation targets, not the entire demo card.
 
 ## Three ways to move
 
-Different tasks need different granularity, so the demo separates them:
+The public demo uses these bindings:
 
-| Keys            | Moves between                                       |
-| --------------- | --------------------------------------------------- |
-| `W` / `S`       | Whole rows; `S` from a header goes to the first row |
-| `A` / `D`       | Column headers                                      |
-| Arrow keys      | Individual cells                                    |
-| `Enter`/`Space` | On a header, sorts by that column                   |
+| Keys              | Behavior                                                                                                                                  |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `W` / `S`         | Move between rows. From a cell, select its row first. `S` from a header enters the first row; `W` from the first row returns to a header. |
+| `A` / `D`         | Enter header navigation at the current or remembered column, then move left or right.                                                     |
+| Arrow keys        | Enter cell navigation at the current row or header column, then move between cells.                                                       |
+| `Enter` / `Space` | Sort when a header has focus.                                                                                                             |
 
-Each family starts from the first row, header or cell, then moves from wherever focus is. The logic is a
-pure function, `moveFocus(focus, key) → nextFocus`, so every rule is unit tested without a browser.
+Movement stops at the edges rather than wrapping. The pure `moveFocus` function accepts the current
+focus, key, dimensions and remembered column, so unit tests can cover transitions without a browser.
+Browser tests then check that actual focus follows the model.
 
-## Keep the semantics native
+For a production table, define what happens after sorting, filtering or deleting a focused row. The demo
+clamps a row index after filtering, but retaining an index is not the same as retaining the same record.
+Empty results, editable cells and virtualized rows need their own rules.
 
-It is still a real `<table>` with `<th scope="col">`. Sorting sets `aria-sort` on the active header, so a
-screen reader announces "sorted ascending" without extra work. A polite live region announces where focus
-lands ("Row 2 of 4: 0x3c…7e0, Mixer, High risk"), because a focused row has no name of its own.
+## Semantics and announcements need separate checks
 
-## Single-letter shortcuts, safely
+The demo keeps a real `<table>` and `<th scope="col">`. It puts `aria-sort` on the sorted header and uses
+a polite live region for focus descriptions such as “Row 2 of 4.” These expose state and context; they do
+not guarantee a particular spoken announcement. Browser, screen reader and reading mode affect what
+users hear, and live messages can be delayed, coalesced or duplicated by native announcements.
 
-WCAG 2.1.4 warns about single-character shortcuts: they can fire by accident, especially for speech-input
-users. The exception is shortcuts that only work while the component has focus. W/A/S/D here only act
-inside the table, so typing anywhere else is unaffected. A visible key legend under the table makes them
-discoverable.
+Native table semantics also do not automatically switch a screen reader into an interaction mode that
+passes arrow keys or letters to JavaScript. Verify the chosen model with the browser and assistive
+technology combinations your users rely on. For conventional sortable tables, the
+[APG sortable table example](https://www.w3.org/WAI/ARIA/apg/patterns/table/examples/sortable-table/)
+is a better starting point than copying this demo's focusable headers.
 
-## Menus that work without a mouse
+## Single-letter shortcuts need boundaries
 
-The toolbar's Filter and "⋯" buttons follow the WAI-ARIA menu button pattern: Enter, Space or ArrowDown
-opens the menu and focuses an item, arrows move, Escape closes and returns focus to the button. Export is a
-plain button that downloads the visible rows as CSV.
+[WCAG 2.1.4](https://www.w3.org/WAI/WCAG22/Understanding/character-key-shortcuts.html) requires character-only
+shortcuts to be switchable, remappable, or active only when the relevant component has focus. The demo
+attaches W/A/S/D handling to the table and ignores Alt, Control and Meta combinations. A visible legend
+explains the bindings.
 
-## Prove it
+That focus boundary matters, but it is not proof of overall accessibility. If you add text fields or
+editable cells, exclude their editing events, including composition input, from navigation handling.
+Check speech input and screen-reader key conflicts, and consider an off switch for optional shortcuts.
 
-Automated checks catch a lot: axe runs on every page in light and dark themes. But "can a keyboard user do
-the task?" needs its own tests. Playwright drives the table with W, A, S, D, arrows and Enter, opens the
-menus from the keyboard, and asserts that in the deliberately broken version nothing is reachable at all.
+## Actions must work without a mouse
+
+Filter and More actions use a menu-button interaction: Enter, Space or ArrowDown opens the menu, arrow
+keys move between items, and Escape closes it and returns focus. Export is a plain button that downloads
+the visible rows as CSV. The [APG menu button pattern](https://www.w3.org/WAI/ARIA/apg/patterns/menu-button/)
+provides the baseline behavior.
+
+## What the tests establish
+
+The repository tests focus transitions, sorting, filtering, menus and CSV output. Playwright exercises
+keyboard paths and checks that the deliberately broken table's controls cannot be reached. Article pages
+are checked with axe in light and dark themes, alongside metadata, links and small-screen layout checks.
+
+These checks catch regressions; they do not establish that every screen-reader interaction is usable.
+Manual checks should cover entering and leaving the table, identifying the active row and column,
+hearing sort changes, and completing the task without relying on the visual focus indicator. That
+assistive-technology review remains necessary before treating this custom model as production guidance.
