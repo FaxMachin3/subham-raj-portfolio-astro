@@ -46,6 +46,25 @@ describe('structured data', () => {
     ]);
   });
 
+  it('links writing breadcrumbs to the Writing section', () => {
+    const graph = articleGraph({
+      path: '/writing/keyboard-data-tables',
+      title: 'Keyboard data tables',
+      description: 'A custom keyboard model',
+      published: new Date('2026-11-02'),
+      updated: new Date('2026-11-02'),
+      keywords: ['accessibility'],
+      section: 'Writing',
+      image: '/og/writing-keyboard-data-tables.png',
+    });
+    const crumbs = byType(graph, 'BreadcrumbList') as { itemListElement: { item: string }[] };
+    expect(crumbs.itemListElement.map((c) => c.item)).toEqual([
+      'https://subhamraj.dev/',
+      'https://subhamraj.dev/#writing',
+      'https://subhamraj.dev/writing/keyboard-data-tables',
+    ]);
+  });
+
   it('marks the résumé up as a ProfilePage with breadcrumbs', () => {
     const graph = resumeGraph();
     expect(byType(graph, 'ProfilePage')).toMatchObject({
