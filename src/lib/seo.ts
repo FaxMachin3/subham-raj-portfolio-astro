@@ -106,7 +106,7 @@ export function articleGraph(article: {
     },
     breadcrumbs([
       { name: 'Home', path: '/' },
-      { name: article.section, path: '/#work' },
+      { name: article.section, path: article.section === 'Writing' ? '/#writing' : '/#work' },
       { name: article.title, path: article.path },
     ]),
     personNode(),

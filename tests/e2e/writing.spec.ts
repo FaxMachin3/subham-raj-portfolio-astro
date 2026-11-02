@@ -32,6 +32,8 @@ for (const { slug, related } of posts) {
     expect(article.headline).toBe(await page.locator('h1').textContent());
     expect(article.datePublished).toContain('2026-11-02');
     expect(article.dateModified).toContain('2026-11-02');
+    const crumbs = graph['@graph'].find((node: { '@type': string }) => node['@type'] === 'BreadcrumbList');
+    expect(crumbs.itemListElement[1].item).toBe('https://subhamraj.dev/#writing');
     await expect(page.locator(`.post__related a[href="/work/${related}"]`)).toBeVisible();
     const links = await page
       .locator('article a[href^="/"]')
